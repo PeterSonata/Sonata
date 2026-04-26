@@ -1409,6 +1409,25 @@ body {
   .track-row { grid-template-columns: 40px 1fr 44px 44px !important; }
 }
 
+/* ── Play All button ── */
+.play-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  border: var(--bw) solid var(--border);
+  color: #fff;
+  padding: 8px 20px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: opacity 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.play-all-btn:hover { opacity: 0.85; }
+.play-all-btn:active { opacity: 0.7; }
+
 /* ── Search section labels ── */
 .search-section-label {
   font-family: 'IBM Plex Mono', monospace;
@@ -2414,6 +2433,7 @@ async function fetchLibrary() {
 
     jellyfin.connected = true;
     updateJfStatus(`Connected · ${items.length.toLocaleString()} tracks`);
+    await saveCachedLibrary(state.tracks.filter(t => !t.saved));
     await fetchJellyfinPlaylists();
 
   } catch(e) {
@@ -2766,7 +2786,11 @@ async function triggerRefresh() {
     showToast('Configure Jellyfin in Settings first');
     return;
   }
+  await clearLibraryCache();
   await fetchLibrary();
+  renderPlaylists();
+  renderView();
+  showToast('Library refreshed');
 }
 
 document.getElementById('load-btn').onclick      = triggerRefresh;
@@ -3217,11 +3241,18 @@ function renderTrackList(tracks, backFn, backLabel) {
       ${backLabel || 'Back'}
     </button>` : '';
 
+  const playAllBtn = isDrill ? `
+    <button class="play-all-btn" id="play-all-btn">
+      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Play
+    </button>` : '';
+
   content.innerHTML = `
     ${backBtn}
     <div class="section-header" style="justify-content:space-between;align-items:center">
       <span class="section-title">${esc(title)}</span>
       <div style="display:flex;align-items:center;gap:8px">
+        ${playAllBtn}
         <span class="section-count">${tracks.length} track${tracks.length !== 1 ? 's' : ''}</span>
         ${saveAllBtn}
       </div>
@@ -3229,6 +3260,9 @@ function renderTrackList(tracks, backFn, backLabel) {
     ${mob ? '' : `<div class="track-list-header"><div>#</div><div>Title</div><div>Album</div><div style="text-align:right">Duration</div><div></div></div>`}
     <div id="track-list">${rows}</div>`;
 
+  if (document.getElementById('play-all-btn')) {
+    document.getElementById('play-all-btn').onclick = () => { playTracksAt(tracks, 0); };
+  }
   if (document.getElementById('back-btn')) {
     document.getElementById('back-btn').onclick = backFn
       ? backFn
@@ -3863,11 +3897,19 @@ function renderPlaylistView() {
         <div class="playlist-meta-type">Playlist</div>
         <div class="playlist-meta-name">${esc(pl.name)}</div>
         <div class="playlist-meta-count">${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
+        ${tracks.length ? `<button class="play-all-btn" id="play-all-btn" style="margin-top:12px">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Play
+        </button>` : ''}
       </div>
     </div>
     <div id="track-list">${tracks.length ? rows : `<div style="padding:40px 16px;color:var(--text3);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace">No tracks yet. Use + on any song.</div>`}</div>`;
 
   initArtCanvases();
+
+  if (document.getElementById('play-all-btn')) {
+    document.getElementById('play-all-btn').onclick = () => playTracksAt(tracks, 0);
+  }
 
   document.getElementById('back-btn').onclick = () => {
     if (isMobile()) { state.currentView = 'playlists-mobile'; state.drillTarget = null; renderView(); }
@@ -5123,6 +5165,94 @@ document.getElementById('fanart-clear-cache-btn').onclick = () => {
   showToast('Artist image cache cleared');
 };
 
+// ══════════════════════════════════════════════
+//  LIBRARY CACHE (IndexedDB)
+// ══════════════════════════════════════════════
+const CACHE_DB_NAME    = 'sonata-library';
+const CACHE_DB_VERSION = 1;
+const CACHE_STORE      = 'tracks';
+const CACHE_META_KEY   = 'sonata_cache_meta';
+
+function openCacheDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(CACHE_DB_NAME, CACHE_DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(CACHE_STORE)) {
+        db.createObjectStore(CACHE_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function saveCachedLibrary(tracks) {
+  try {
+    const db = await openCacheDB();
+    const tx = db.transaction(CACHE_STORE, 'readwrite');
+    const store = tx.objectStore(CACHE_STORE);
+    store.clear();
+    // Store only serialisable fields — no File objects
+    for (const t of tracks) {
+      if (t.saved) continue; // OPFS tracks handled separately
+      store.put({
+        id: t.id, jellyfinId: t.jellyfinId, title: t.title,
+        artist: t.artist, albumArtist: t.albumArtist, album: t.album,
+        genre: t.genre, trackNumber: t.trackNumber, duration: t.duration,
+        year: t.year || 0, artSeed: t.artSeed, artUrl: t.artUrl,
+        streamUrl: t.streamUrl, picture: null, file: null, saved: false,
+      });
+    }
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+    // Store metadata: timestamp and track count
+    localStorage.setItem(CACHE_META_KEY, JSON.stringify({
+      ts: Date.now(), count: tracks.filter(t => !t.saved).length,
+      serverUrl: jellyfin.serverUrl,
+    }));
+  } catch(e) {
+    console.warn('Cache write failed:', e);
+  }
+}
+
+async function loadCachedLibrary() {
+  try {
+    const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || 'null');
+    if (!meta || meta.serverUrl !== jellyfin.serverUrl) return false;
+    const db    = await openCacheDB();
+    const tx    = db.transaction(CACHE_STORE, 'readonly');
+    const store = tx.objectStore(CACHE_STORE);
+    const all   = await new Promise((res, rej) => {
+      const req = store.getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
+    });
+    db.close();
+    if (!all.length) return false;
+    // Merge into state.tracks (keep OPFS-saved ones)
+    const saved = state.tracks.filter(t => t.saved);
+    state.tracks = [...saved, ...all];
+    jellyfin.connected = true;
+    updateJfStatus(`Library · ${all.length.toLocaleString()} tracks`);
+    return true;
+  } catch(e) {
+    console.warn('Cache read failed:', e);
+    return false;
+  }
+}
+
+async function clearLibraryCache() {
+  try {
+    const db = await openCacheDB();
+    const tx = db.transaction(CACHE_STORE, 'readwrite');
+    tx.objectStore(CACHE_STORE).clear();
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+    localStorage.removeItem(CACHE_META_KEY);
+  } catch(e) {}
+}
+
 // Pre-populate fanart API key input if already saved
 if (artistArt.apiKey) {
   const inp = document.getElementById('fanart-api-key-input');
@@ -5162,12 +5292,36 @@ document.getElementById('jf-connect-btn').onclick = async () => {
 //  INIT
 // ══════════════════════════════════════════════
 (async () => {
-  await loadSavedTracks();   // Load any OPFS-saved offline tracks first
-  renderPlaylists();
-  renderView();
-  // Then fetch from Jellyfin if configured
+  await loadSavedTracks();   // Load OPFS offline tracks first
+
   if (jellyfin.serverUrl && jellyfin.apiKey) {
-    await fetchLibrary();
+    // Try cache first — instant load
+    const fromCache = await loadCachedLibrary();
+    if (fromCache) {
+      // Library is visible immediately
+      await fetchJellyfinPlaylists();
+      renderPlaylists();
+      renderView();
+      // Background refresh — silent, no loading spinner
+      document.getElementById('loading-text').textContent = 'Refreshing library…';
+      setTimeout(async () => {
+        try {
+          await fetchLibrary();
+          renderPlaylists();
+          renderView();
+        } catch(e) { /* keep cached version */ }
+      }, 1500);
+    } else {
+      // No cache yet — full load with spinner
+      renderPlaylists();
+      renderView();
+      await fetchLibrary();
+      renderPlaylists();
+      renderView();
+    }
+  } else {
+    renderPlaylists();
+    renderView();
   }
 })();
 </script>
