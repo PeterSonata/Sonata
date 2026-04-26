@@ -2449,18 +2449,23 @@ async function resolveJellyfinUser() {
 }
 
 // Fetch full library from Jellyfin and populate state.tracks (non-saved)
-async function fetchLibrary() {
+async function fetchLibrary(opts = {}) {
+  const silent = opts.silent || false;
   if (!jellyfin.localUrl && !jellyfin.tailscaleUrl || !jellyfin.apiKey) {
     updateJfStatus('Not configured — open Settings to connect');
     return;
   }
 
-  document.getElementById('loading').classList.add('visible');
-  document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
+  if (!silent) {
+    document.getElementById('loading').classList.add('visible');
+    document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
+  }
 
   try {
     await resolveServerUrl();
-    updateJfStatus(`Connecting via ${jellyfin.serverUrl === jellyfin.localUrl ? 'local network' : 'Tailscale'}…`);
+    if (!silent) {
+      updateJfStatus(`Connecting via ${jellyfin.serverUrl === jellyfin.localUrl ? 'local network' : 'Tailscale'}…`);
+    }
     await resolveJellyfinUser();
 
     document.getElementById('loading-text').textContent = 'Loading library…';
@@ -2521,16 +2526,20 @@ async function fetchLibrary() {
     jellyfin.connected = true;
     updateJfStatus(`Connected · ${items.length.toLocaleString()} tracks`);
     await saveCachedLibrary(state.tracks.filter(t => !t.saved));
-    await fetchJellyfinPlaylists();
+    if (!silent) await fetchJellyfinPlaylists();
 
   } catch(e) {
     console.error('Jellyfin fetch error:', e);
-    updateJfStatus(`Error: ${e.message}`);
-    showToast('Could not connect to Jellyfin');
+    if (!silent) {
+      updateJfStatus(`Error: ${e.message}`);
+      showToast('Could not connect to Jellyfin');
+    }
   }
 
-  document.getElementById('loading').classList.remove('visible');
-  renderView();
+  if (!silent) {
+    document.getElementById('loading').classList.remove('visible');
+    renderView();
+  }
 }
 
 function updateJfStatus(msg) {
@@ -5436,11 +5445,9 @@ document.getElementById('jf-connect-btn').onclick = async () => {
       renderView();
       setTimeout(async () => {
         try {
-          await fetchLibrary(); // also calls fetchJellyfinPlaylists inside
-          renderPlaylists();
-          renderView();
+          await fetchLibrary({ silent: true });
         } catch(e) { /* keep cached version and localStorage playlists */ }
-      }, 1500);
+      }, 2000);
     } else {
       // No cache — full load
       await fetchLibrary();
