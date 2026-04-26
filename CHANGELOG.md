@@ -4,6 +4,13 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 
 ---
 
+## v0.8 — 26 April 2026
+- Background library sync is now fully silent — no loading spinner, no re-render while browsing
+- Sync runs 2 seconds after cache load, invisible to the user
+- Only explicit Refresh or Connect & Load triggers visible loading
+
+---
+
 ## v0.7 — 26 April 2026
 ### Jellyfin & Network
 - Dual server URL: local network (fast) + Tailscale fallback (remote)
