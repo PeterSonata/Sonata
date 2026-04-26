@@ -1409,6 +1409,67 @@ body {
   .track-row { grid-template-columns: 40px 1fr 44px 44px !important; }
 }
 
+/* ── Album hero ── */
+.album-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px 24px 20px;
+  border-bottom: var(--bw) solid var(--border);
+  background: var(--surface);
+}
+.album-hero-art {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border: var(--bw) solid var(--border);
+}
+.album-hero-art canvas,
+.album-hero-art img {
+  width: 160px;
+  height: 160px;
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  object-fit: cover;
+}
+.album-hero-text { padding-top: 4px; }
+.album-hero-type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.album-hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  line-height: 1.05;
+  margin-bottom: 6px;
+}
+.album-hero-artist {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+.album-hero-meta {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 14px;
+}
+@media (max-width: 768px) {
+  .album-hero { padding: 16px; gap: 16px; }
+  .album-hero-art { width: 100px; height: 100px; }
+  .album-hero-art canvas, .album-hero-art img { width: 100px; height: 100px; }
+  .album-hero-title { font-size: 26px; }
+}
+
 /* ── Play All button ── */
 .play-all-btn {
   display: flex;
@@ -2134,13 +2195,16 @@ body {
     <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Jellyfin Connection</div>
     <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
-        Sonata streams your music from <strong>Jellyfin</strong> running on your NAS.
-        Enter your server address and API key below.
-        Get an API key from <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Jellyfin → Dashboard → API Keys</span>.
+        Sonata streams from <strong>Jellyfin</strong> on your NAS. Enter your local IP for home use and your Tailscale IP for remote access. Get an API key from <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Jellyfin → Dashboard → API Keys</span>.
       </div>
       <div style="margin-bottom:8px">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Server URL</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Local URL (home network)</div>
         <input type="text" id="jf-url-input" placeholder="http://192.168.1.83:8096"
+          style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Tailscale URL (away from home)</div>
+        <input type="text" id="jf-tailscale-input" placeholder="http://100.66.189.116:8096"
           style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
       </div>
       <div style="margin-bottom:12px">
@@ -2315,11 +2379,32 @@ try {
 //  JELLYFIN CONNECTION
 // ══════════════════════════════════════════════
 const jellyfin = {
-  serverUrl: (localStorage.getItem('sonata_jf_url') || '').replace(/\/$/, ''),
-  apiKey:    localStorage.getItem('sonata_jf_key')  || '',
-  userId:    localStorage.getItem('sonata_jf_userid') || '',
-  connected: false,
+  localUrl:     (localStorage.getItem('sonata_jf_url') || '').replace(/\/$/, ''),
+  tailscaleUrl: (localStorage.getItem('sonata_jf_tailscale') || '').replace(/\/$/, ''),
+  apiKey:       localStorage.getItem('sonata_jf_key')  || '',
+  userId:       localStorage.getItem('sonata_jf_userid') || '',
+  serverUrl:    '',   // resolved at connect time
+  connected:    false,
 };
+
+// Resolve which URL to use — try local first (fast), fall back to Tailscale
+async function resolveServerUrl() {
+  const local     = jellyfin.localUrl;
+  const tailscale = jellyfin.tailscaleUrl;
+  if (!local && !tailscale) throw new Error('No server URL configured');
+  if (!local) { jellyfin.serverUrl = tailscale; return; }
+  if (!tailscale) { jellyfin.serverUrl = local; return; }
+  // Try local with a short timeout
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2000);
+    await fetch(`${local}/System/Ping`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    jellyfin.serverUrl = local;
+  } catch(e) {
+    jellyfin.serverUrl = tailscale;
+  }
+}
 
 function jfHeaders() {
   return {
@@ -2365,7 +2450,7 @@ async function resolveJellyfinUser() {
 
 // Fetch full library from Jellyfin and populate state.tracks (non-saved)
 async function fetchLibrary() {
-  if (!jellyfin.serverUrl || !jellyfin.apiKey) {
+  if (!jellyfin.localUrl && !jellyfin.tailscaleUrl || !jellyfin.apiKey) {
     updateJfStatus('Not configured — open Settings to connect');
     return;
   }
@@ -2374,6 +2459,8 @@ async function fetchLibrary() {
   document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
 
   try {
+    await resolveServerUrl();
+    updateJfStatus(`Connecting via ${jellyfin.serverUrl === jellyfin.localUrl ? 'local network' : 'Tailscale'}…`);
     await resolveJellyfinUser();
 
     document.getElementById('loading-text').textContent = 'Loading library…';
@@ -2460,8 +2547,6 @@ async function fetchJellyfinPlaylists() {
       `&SortBy=SortName&SortOrder=Ascending`
     );
     const serverPlaylists = data.Items || [];
-
-    // Rebuild playlists from Jellyfin — fetch track IDs for each
     const newPlaylists = [];
     for (const pl of serverPlaylists) {
       try {
@@ -2470,17 +2555,23 @@ async function fetchJellyfinPlaylists() {
           id:       pl.Id,
           name:     pl.Name,
           trackIds: (items.Items || []).map(i => i.Id),
-          // Store PlaylistItemIds for deletion
           _entryIds: (items.Items || []).reduce((acc, i) => {
             acc[i.Id] = i.PlaylistItemId; return acc;
           }, {}),
         });
       } catch(e) { /* skip broken playlist */ }
     }
-    state.playlists = newPlaylists;
+    // Merge: keep any local-only playlists (id not from Jellyfin) alongside server ones
+    const localOnly = state.playlists.filter(p =>
+      !newPlaylists.find(np => np.id === p.id) &&
+      !serverPlaylists.find(sp => sp.Id === p.id)
+    );
+    state.playlists = [...newPlaylists, ...localOnly];
+    savePlaylists();
     renderPlaylists();
   } catch(e) {
     console.error('Playlist fetch error:', e);
+    // Keep existing playlists on error
   }
 }
 
@@ -3241,7 +3332,32 @@ function renderTrackList(tracks, backFn, backLabel) {
       ${backLabel || 'Back'}
     </button>` : '';
 
-  const playAllBtn = isDrill ? `
+  // Build album hero (art + year) for album/artist-album drill-downs
+  let albumHero = '';
+  if (isDrill && (state.drillTarget.type === 'album' || state.drillTarget.type === 'artist-album' || state.drillTarget.type === 'compilation' || state.drillTarget.type === 'djmix')) {
+    const firstTrack = tracks[0];
+    const artUrl  = firstTrack?.artUrl  || '';
+    const artSeed = firstTrack?.artSeed || title;
+    const year    = tracks.reduce((y, t) => (t.year && (!y || t.year < y)) ? t.year : y, 0);
+    albumHero = `
+    <div class="album-hero">
+      <div class="album-hero-art">
+        <canvas class="art-canvas" data-seed="${esc(artSeed)}" data-arturl="${esc(artUrl)}" data-size="160"></canvas>
+      </div>
+      <div class="album-hero-text">
+        <div class="album-hero-type">${state.drillTarget.type === 'compilation' ? 'Compilation' : state.drillTarget.type === 'djmix' ? 'DJ Mix' : 'Album'}</div>
+        <div class="album-hero-title">${esc(title)}</div>
+        ${state.drillTarget.artist ? `<div class="album-hero-artist">${esc(state.drillTarget.artist)}</div>` : ''}
+        <div class="album-hero-meta">${year ? year + ' · ' : ''}${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
+        <button class="play-all-btn" id="play-all-btn">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Play
+        </button>
+      </div>
+    </div>`;
+  }
+
+  const playAllBtn = (!albumHero && isDrill) ? `
     <button class="play-all-btn" id="play-all-btn">
       <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Play
@@ -3249,6 +3365,8 @@ function renderTrackList(tracks, backFn, backLabel) {
 
   content.innerHTML = `
     ${backBtn}
+    ${albumHero}
+    ${albumHero ? '' : `
     <div class="section-header" style="justify-content:space-between;align-items:center">
       <span class="section-title">${esc(title)}</span>
       <div style="display:flex;align-items:center;gap:8px">
@@ -3256,9 +3374,11 @@ function renderTrackList(tracks, backFn, backLabel) {
         <span class="section-count">${tracks.length} track${tracks.length !== 1 ? 's' : ''}</span>
         ${saveAllBtn}
       </div>
-    </div>
+    </div>`}
     ${mob ? '' : `<div class="track-list-header"><div>#</div><div>Title</div><div>Album</div><div style="text-align:right">Duration</div><div></div></div>`}
     <div id="track-list">${rows}</div>`;
+
+  initArtCanvases();
 
   if (document.getElementById('play-all-btn')) {
     document.getElementById('play-all-btn').onclick = () => { playTracksAt(tracks, 0); };
@@ -3885,6 +4005,13 @@ function renderPlaylistView() {
   }).join('');
 
   const artSeeds = tracks.slice(0,4).map(t => t.artSeed);
+  const artUrls  = tracks.slice(0,4).map(t => t.artUrl || '');
+
+  const collage = [0,1,2,3].map(i => {
+    const url  = artUrls[i]  || '';
+    const seed = artSeeds[i] || pl.name;
+    return `<canvas class="art-canvas" data-seed="${esc(seed)}" data-arturl="${esc(url)}" data-size="70"></canvas>`;
+  }).join('');
 
   content.innerHTML = `
     <button class="back-btn" id="back-btn">
@@ -3892,7 +4019,7 @@ function renderPlaylistView() {
       Library
     </button>
     <div class="playlist-meta">
-      <div class="playlist-header-art">${[0,1,2,3].map(i => `<canvas class="art-canvas" data-seed="${esc(artSeeds[i]||pl.name)}" data-size="75"></canvas>`).join('')}</div>
+      <div class="playlist-header-art">${collage}</div>
       <div class="playlist-meta-text">
         <div class="playlist-meta-type">Playlist</div>
         <div class="playlist-meta-name">${esc(pl.name)}</div>
@@ -5209,7 +5336,6 @@ async function saveCachedLibrary(tracks) {
     // Store metadata: timestamp and track count
     localStorage.setItem(CACHE_META_KEY, JSON.stringify({
       ts: Date.now(), count: tracks.filter(t => !t.saved).length,
-      serverUrl: jellyfin.serverUrl,
     }));
   } catch(e) {
     console.warn('Cache write failed:', e);
@@ -5219,7 +5345,7 @@ async function saveCachedLibrary(tracks) {
 async function loadCachedLibrary() {
   try {
     const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || 'null');
-    if (!meta || meta.serverUrl !== jellyfin.serverUrl) return false;
+    if (!meta) return false;
     const db    = await openCacheDB();
     const tx    = db.transaction(CACHE_STORE, 'readonly');
     const store = tx.objectStore(CACHE_STORE);
@@ -5262,66 +5388,65 @@ if (artistArt.apiKey) {
 
 // Pre-populate Jellyfin inputs if already saved
 (function initJellyfinUI() {
-  const urlEl = document.getElementById('jf-url-input');
-  const keyEl = document.getElementById('jf-key-input');
-  if (urlEl && jellyfin.serverUrl) urlEl.value = jellyfin.serverUrl;
-  if (keyEl && jellyfin.apiKey)    keyEl.value = jellyfin.apiKey;
-  if (jellyfin.connected) updateJfStatus(`Connected · ${state.tracks.length.toLocaleString()} tracks`);
+  const localEl     = document.getElementById('jf-url-input');
+  const tailscaleEl = document.getElementById('jf-tailscale-input');
+  const keyEl       = document.getElementById('jf-key-input');
+  if (localEl     && jellyfin.localUrl)     localEl.value     = jellyfin.localUrl;
+  if (tailscaleEl && jellyfin.tailscaleUrl) tailscaleEl.value = jellyfin.tailscaleUrl;
+  if (keyEl       && jellyfin.apiKey)       keyEl.value       = jellyfin.apiKey;
 })();
 
 document.getElementById('jf-connect-btn').onclick = async () => {
-  const urlEl = document.getElementById('jf-url-input');
-  const keyEl = document.getElementById('jf-key-input');
-  const url   = (urlEl.value || '').trim().replace(/\/$/, '');
-  const key   = (keyEl.value || '').trim();
-  if (!url || !key) { showToast('Enter server URL and API key'); return; }
-  jellyfin.serverUrl = url;
-  jellyfin.apiKey    = key;
-  jellyfin.userId    = ''; // reset so it re-resolves
-  localStorage.setItem('sonata_jf_url',    url);
-  localStorage.setItem('sonata_jf_key',    key);
+  const localEl     = document.getElementById('jf-url-input');
+  const tailscaleEl = document.getElementById('jf-tailscale-input');
+  const keyEl       = document.getElementById('jf-key-input');
+  const local       = (localEl.value     || '').trim().replace(/\/$/, '');
+  const tailscale   = (tailscaleEl.value || '').trim().replace(/\/$/, '');
+  const key         = (keyEl.value       || '').trim();
+  if ((!local && !tailscale) || !key) { showToast('Enter at least one server URL and API key'); return; }
+  jellyfin.localUrl     = local;
+  jellyfin.tailscaleUrl = tailscale;
+  jellyfin.apiKey       = key;
+  jellyfin.userId       = '';
+  localStorage.setItem('sonata_jf_url',       local);
+  localStorage.setItem('sonata_jf_tailscale', tailscale);
+  localStorage.setItem('sonata_jf_key',       key);
   localStorage.removeItem('sonata_jf_userid');
   updateJfStatus('Connecting…');
   closeSettings();
   await fetchLibrary();
-  // Re-open settings to show result
-  // (user closed it — leave closed, toast will inform them)
 };
 
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
 (async () => {
-  await loadSavedTracks();   // Load OPFS offline tracks first
+  await loadSavedTracks();
 
-  if (jellyfin.serverUrl && jellyfin.apiKey) {
-    // Try cache first — instant load
+  // Show whatever we have immediately — localStorage playlists load at state init
+  renderPlaylists();
+  renderView();
+
+  const hasServer = (jellyfin.localUrl || jellyfin.tailscaleUrl) && jellyfin.apiKey;
+  if (hasServer) {
     const fromCache = await loadCachedLibrary();
     if (fromCache) {
-      // Library is visible immediately
-      await fetchJellyfinPlaylists();
+      // Library from cache — render immediately, then sync everything in background
       renderPlaylists();
       renderView();
-      // Background refresh — silent, no loading spinner
-      document.getElementById('loading-text').textContent = 'Refreshing library…';
       setTimeout(async () => {
         try {
-          await fetchLibrary();
+          await fetchLibrary(); // also calls fetchJellyfinPlaylists inside
           renderPlaylists();
           renderView();
-        } catch(e) { /* keep cached version */ }
+        } catch(e) { /* keep cached version and localStorage playlists */ }
       }, 1500);
     } else {
-      // No cache yet — full load with spinner
-      renderPlaylists();
-      renderView();
+      // No cache — full load
       await fetchLibrary();
       renderPlaylists();
       renderView();
     }
-  } else {
-    renderPlaylists();
-    renderView();
   }
 })();
 </script>
