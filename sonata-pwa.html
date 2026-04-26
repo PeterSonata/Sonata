@@ -1,0 +1,4922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5f3ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sonata">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Sonata</title>
+<link id="pwa-manifest" rel="manifest">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;500;700;900&family=Josefin+Sans:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600;700&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #f5f3ee;
+  --surface:    #ffffff;
+  --surface2:   #eeecea;
+  --surface3:   #e4e2de;
+  --border:     #0d0d0d;
+  --bw:         3px;           /* grid line width */
+  --accent:     #d4181b;       /* Mondrian red */
+  --accent2:    #f5c518;       /* Mondrian yellow */
+  --blue:       #1932a0;       /* Mondrian blue */
+  --accent-dim: #8a0e10;
+  --text:       #0d0d0d;
+  --text2:      #333333;
+  --text3:      #888888;
+  --red:        #d4181b;
+  --radius:     0px;
+  --player-h:   92px;
+  --sidebar-w:  224px;
+  --bottom-nav: 64px;
+  --safe-b:     env(safe-area-inset-bottom, 0px);
+  --safe-t:     env(safe-area-inset-top, 0px);
+}
+
+html, body { height: 100%; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: none;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 0; }
+
+/* ═══════════════════════════════════
+   LAYOUT
+═══════════════════════════════════ */
+#app {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: var(--bw) solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.logo {
+  padding: 22px 20px 18px;
+  border-bottom: var(--bw) solid var(--border);
+  flex-shrink: 0;
+  background: var(--blue);
+}
+.logo-word {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.logo-sub {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.nav-section { padding: 14px 0 0; flex-shrink: 0; }
+.nav-label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 20px 6px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  transition: color 0.1s, background 0.1s;
+  border-left: 4px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { color: var(--text); background: var(--surface2); border-left-color: var(--text3); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--bg); font-weight: 700; }
+.nav-item svg { opacity: 0.6; flex-shrink: 0; }
+.nav-item.active svg { opacity: 1; stroke: var(--accent); }
+
+.playlist-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  border-top: var(--bw) solid var(--border);
+  margin-top: 8px;
+}
+.playlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  transition: all 0.1s;
+  gap: 8px;
+  border-left: 4px solid transparent;
+}
+.playlist-item:hover { color: var(--text); background: var(--surface2); border-left-color: var(--text3); }
+.playlist-item.active { color: var(--accent); border-left-color: var(--accent); }
+.playlist-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playlist-delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: opacity 0.1s;
+  font-size: 16px;
+  line-height: 1;
+}
+.playlist-item:hover .playlist-delete { opacity: 1; }
+
+.new-playlist-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  transition: color 0.1s, background 0.1s;
+  border-left: 4px solid transparent;
+  letter-spacing: 0.04em;
+}
+.new-playlist-btn:hover { color: var(--accent); background: var(--surface2); border-left-color: var(--accent); }
+
+/* ── Main ── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: var(--bw) solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  height: 56px;
+}
+
+#search-wrap {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  border-right: var(--bw) solid var(--border);
+}
+#search-wrap svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+#search {
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  border: none;
+  padding: 0 14px 0 44px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  outline: none;
+  -webkit-appearance: none;
+}
+#search::placeholder { color: var(--text3); }
+#search:focus { background: #fffef8; }
+
+#load-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px;
+  height: 100%;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#load-btn:hover { background: var(--accent-dim); }
+
+
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg);
+}
+
+/* ═══════════════════════════════════
+   TRACK LIST
+═══════════════════════════════════ */
+.track-list-header {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 80px 40px;
+  padding: 0 10px 8px;
+  border-bottom: var(--bw) solid var(--border);
+  margin-bottom: 4px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+}
+.track-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 80px 40px;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.08s, border-left-color 0.08s;
+  -webkit-tap-highlight-color: transparent;
+  border-left: 4px solid transparent;
+}
+.track-row:hover, .track-row:active { background: var(--surface); border-left-color: var(--accent2); }
+.track-row.playing { background: var(--surface); border-left-color: var(--accent); }
+.track-row.playing .track-title { color: var(--accent); font-weight: 700; }
+
+.track-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+}
+.track-row.playing .track-num { color: var(--accent); }
+
+.playing-bars { display: none; gap: 2px; align-items: flex-end; height: 14px; justify-content: center; }
+.track-row.playing .playing-bars { display: flex; }
+.track-row.playing .track-num-val { display: none; }
+
+.bar {
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0;
+  animation: bounce 0.8s ease-in-out infinite alternate;
+}
+.bar:nth-child(2) { animation-delay: 0.15s; }
+.bar:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { from { height: 3px; } to { height: 14px; } }
+.paused-state .bar { animation-play-state: paused; }
+
+.track-info { min-width: 0; padding-right: 16px; }
+.track-title { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.track-artist-sm { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-album-col { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 16px; }
+.track-dur { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text3); text-align: right; }
+.track-actions { display: flex; justify-content: center; }
+
+.add-to-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 6px;
+  opacity: 0;
+  transition: all 0.1s;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 300;
+}
+.track-row:hover .add-to-btn { opacity: 1; }
+.add-to-btn:hover { color: var(--accent); }
+
+/* ═══════════════════════════════════
+   GRID VIEW
+═══════════════════════════════════ */
+.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0;
+  border-top: var(--bw) solid var(--border);
+  border-left: var(--bw) solid var(--border);
+}
+.grid-card {
+  cursor: pointer;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  border-right: var(--bw) solid var(--border);
+  border-bottom: var(--bw) solid var(--border);
+  padding: 12px;
+  background: var(--surface);
+}
+.grid-card:hover { background: #fffef8; }
+.grid-card:hover .card-label { color: var(--accent); }
+.card-art {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--surface2);
+  border: var(--bw) solid var(--border);
+  position: relative;
+}
+.card-art canvas { width: 100%; height: 100%; display: block; }
+.card-art .artist-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.card-art .artist-photo.loaded { opacity: 1; }
+.card-art .artist-photo-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.card-label { font-size: 12px; font-weight: 700; color: var(--text); margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.1s; text-transform: uppercase; letter-spacing: 0.04em; }
+.card-sublabel { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 0;
+  padding-bottom: 14px;
+  border-bottom: var(--bw) solid var(--border);
+  margin-bottom: 16px;
+}
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 0.06em; color: var(--text); line-height: 1; }
+.section-count { font-size: 11px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  border-bottom: var(--bw) solid var(--border);
+  color: var(--text3);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 0;
+  width: 100%;
+  margin-bottom: 20px;
+  transition: color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-btn:hover { color: var(--accent); }
+
+/* ═══════════════════════════════════
+   GENRE CARDS
+═══════════════════════════════════ */
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0;
+  border-top: var(--bw) solid var(--border);
+  border-left: var(--bw) solid var(--border);
+}
+.genre-card {
+  border-right: var(--bw) solid var(--border);
+  border-bottom: var(--bw) solid var(--border);
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: filter 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.genre-card:hover { filter: brightness(1.08); }
+.genre-name { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.06em; color: var(--text); margin-bottom: 4px; }
+.genre-count { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--text2); opacity: 0.7; }
+
+/* ═══════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════ */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 20px;
+  text-align: center;
+}
+.empty-icon {
+  width: 80px; height: 80px;
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+}
+#empty-state h2 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 0.08em; color: var(--text2); }
+#empty-state p { font-size: 13px; color: var(--text3); max-width: 280px; line-height: 1.6; }
+.empty-load-btn {
+  padding: 12px 28px;
+  background: var(--accent);
+  border: var(--bw) solid var(--border);
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background 0.1s;
+}
+.empty-load-btn:hover, .empty-load-btn:active { background: var(--accent-dim); }
+
+/* ═══════════════════════════════════
+   PLAYLIST META
+═══════════════════════════════════ */
+.playlist-header-art {
+  width: 140px; height: 140px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border: var(--bw) solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.playlist-header-art canvas { width: 100%; height: 100%; display: block; }
+.playlist-meta { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 28px; }
+.playlist-meta-text { padding-top: 4px; }
+.playlist-meta-type { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; }
+.playlist-meta-name { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 0.06em; color: var(--text); margin-bottom: 6px; line-height: 1; }
+.playlist-meta-count { font-size: 11px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+
+/* ═══════════════════════════════════
+   DESKTOP PLAYER
+═══════════════════════════════════ */
+#player {
+  height: var(--player-h);
+  background: var(--surface);
+  border-top: var(--bw) solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+#now-playing {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 280px;
+  min-width: 0;
+  height: 100%;
+  border-right: var(--bw) solid var(--border);
+  overflow: hidden;
+}
+#np-art {
+  width: 60px; height: 100%;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border-right: var(--bw) solid var(--border);
+  overflow: hidden;
+}
+#np-art canvas { width: 100%; height: 100%; display: block; object-fit: cover; }
+#np-text { min-width: 0; padding: 0 14px; }
+#np-title { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.04em; }
+#np-artist { font-size: 11px; color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  height: 100%;
+  border-right: var(--bw) solid var(--border);
+}
+.ctrl-btns { display: flex; align-items: center; gap: 4px; }
+.ctrl-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s, background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ctrl-btn:hover { color: var(--text); background: var(--surface2); }
+.ctrl-btn:active { background: var(--accent2); }
+.ctrl-btn.active { color: var(--accent); }
+
+#play-btn {
+  width: 44px; height: 44px;
+  background: var(--accent);
+  border: var(--bw) solid var(--border);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+#play-btn:hover { background: var(--accent-dim); }
+#play-btn:active { background: var(--accent2); }
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 560px;
+}
+.time-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  width: 36px;
+  flex-shrink: 0;
+}
+.time-label.right { text-align: right; }
+
+#progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  position: relative;
+}
+#progress-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 0%;
+  transition: width 0.3s linear;
+  pointer-events: none;
+  position: relative;
+}
+#progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -5px; top: 50%;
+  transform: translateY(-50%);
+  width: 10px; height: 10px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+#progress-bar:hover #progress-fill::after { opacity: 1; }
+
+#vol-area {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 160px;
+  height: 100%;
+  justify-content: flex-end;
+  border-left: none;
+  padding: 0 16px;
+}
+.vol-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.1s;
+}
+.vol-btn:hover { color: var(--text); }
+#vol-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  max-width: 90px;
+}
+#vol-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 80%;
+  pointer-events: none;
+  transition: background 0.1s;
+}
+#vol-bar:hover #vol-fill { background: var(--accent); }
+
+/* ═══════════════════════════════════
+   CONTEXT MENU
+═══════════════════════════════════ */
+#ctx-menu {
+  position: fixed;
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  padding: 4px 0;
+  min-width: 190px;
+  z-index: 1000;
+  box-shadow: 5px 5px 0 var(--border);
+  display: none;
+}
+.ctx-label { padding: 4px 14px; font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.18em; font-family: 'IBM Plex Mono', monospace; }
+.ctx-item {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.08s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ctx-item:hover, .ctx-item:active { background: var(--accent); color: #fff; }
+.ctx-item.danger { color: var(--red); }
+.ctx-divider { height: var(--bw); background: var(--border); margin: 4px 0; }
+
+/* ═══════════════════════════════════
+   MODAL
+═══════════════════════════════════ */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,13,13,0.6);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#modal-overlay.visible { display: flex; }
+#modal {
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  padding: 28px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 6px 6px 0 var(--border);
+}
+#modal h3 { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 0.08em; margin-bottom: 18px; }
+#modal input {
+  width: 100%;
+  background: var(--bg);
+  border: var(--bw) solid var(--border);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.1s;
+  margin-bottom: 18px;
+  -webkit-appearance: none;
+}
+#modal input:focus { border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel {
+  padding: 10px 20px;
+  background: transparent;
+  border: var(--bw) solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: all 0.1s;
+}
+.btn-cancel:hover { background: var(--surface2); }
+.btn-confirm {
+  padding: 10px 20px;
+  background: var(--accent);
+  border: var(--bw) solid var(--border);
+  color: #fff;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background 0.1s;
+}
+.btn-confirm:hover { background: var(--accent-dim); }
+
+/* ═══════════════════════════════════
+   LOADING + TOAST
+═══════════════════════════════════ */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(245,243,238,0.92);
+  z-index: 3000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+#loading.visible { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid var(--surface3);
+  border-top-color: var(--accent);
+  border-radius: 0;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-text { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+
+#toast {
+  position: fixed;
+  bottom: calc(var(--player-h) + 16px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace;
+  opacity: 0;
+  transition: all 0.25s;
+  pointer-events: none;
+  z-index: 500;
+  white-space: nowrap;
+  box-shadow: 4px 4px 0 var(--border);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ═══════════════════════════════════
+   MOBILE STYLES
+═══════════════════════════════════ */
+#mobile-topbar { display: none; }
+#bottom-nav    { display: none; }
+#mini-player   { display: none; }
+#full-player   { display: none; }
+#mobile-search-bar { display: none; }
+
+@media (max-width: 768px) {
+  #sidebar     { display: none !important; }
+  #topbar      { display: none !important; }
+  #player      { display: none !important; }
+  #toast       { bottom: calc(var(--bottom-nav) + var(--safe-b) + 64px + 16px); }
+
+  #mobile-topbar { display: flex; }
+  #bottom-nav    { display: flex; }
+  #mini-player   { display: flex; }
+
+  .track-list-header { display: none; }
+  .track-row {
+    grid-template-columns: 40px 1fr 44px;
+    padding: 10px 8px;
+    min-height: 60px;
+  }
+  .track-album-col { display: none; }
+  .track-dur { display: none; }
+  .add-to-btn { opacity: 1 !important; font-size: 22px; }
+
+  .grid-view { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .genre-grid { grid-template-columns: repeat(2, 1fr); }
+  .genre-card { padding: 16px 14px; }
+
+  #content { padding: 0; background: var(--bg); }
+  .section-header { padding: 16px 16px 12px; margin-bottom: 0; }
+  .back-btn { margin: 0; padding: 12px 16px; }
+  #track-list { padding: 0; }
+  .track-row { padding: 10px 16px; border-left-width: 4px; }
+
+  .section-title { font-size: 30px; }
+  .playlist-meta { flex-direction: column; align-items: center; text-align: center; padding: 20px 16px 0; }
+  .playlist-meta-name { font-size: 36px; }
+  .grid-view { padding: 0; }
+  .genre-grid { padding: 0; }
+}
+
+/* ── Mobile top bar ── */
+#mobile-topbar {
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 0 0;
+  padding-top: var(--safe-t);
+  background: var(--blue);
+  border-bottom: var(--bw) solid var(--border);
+  flex-shrink: 0;
+  gap: 0;
+  z-index: 10;
+  height: calc(52px + var(--safe-t));
+}
+.mob-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.16em;
+  color: #ffffff;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  padding: 0 18px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+}
+.mob-icon-btn {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid rgba(255,255,255,0.3);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0 18px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.mob-icon-btn:active { background: rgba(255,255,255,0.15); }
+
+#mobile-search-bar {
+  padding: 0;
+  background: var(--surface);
+  border-bottom: var(--bw) solid var(--border);
+  flex-shrink: 0;
+}
+#mobile-search-bar.visible { display: block; }
+#mob-search {
+  width: 100%;
+  background: var(--surface);
+  border: none;
+  padding: 14px 16px 14px 44px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  outline: none;
+  -webkit-appearance: none;
+}
+#mob-search::placeholder { color: var(--text3); }
+.mob-search-wrap { position: relative; }
+.mob-search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+
+/* ── Mini player ── */
+#mini-player {
+  align-items: center;
+  background: var(--surface);
+  border-top: var(--bw) solid var(--border);
+  padding: 0;
+  gap: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 50;
+  height: 60px;
+}
+
+#mini-art {
+  width: 60px; height: 60px;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border-right: var(--bw) solid var(--border);
+  overflow: hidden;
+}
+#mini-art canvas { width: 100%; height: 100%; display: block; }
+
+#mini-text { flex: 1; min-width: 0; padding: 0 14px; }
+#mini-title { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.04em; }
+#mini-artist { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mini-ctrl {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.mini-ctrl:active { background: var(--surface2); }
+
+#mini-play-btn {
+  width: 52px; height: 100%;
+  background: var(--accent);
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+#mini-play-btn:active { background: var(--accent-dim); }
+
+#mini-progress {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--surface3);
+}
+#mini-progress-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 0%;
+  transition: width 0.3s linear;
+}
+
+/* ── Bottom nav ── */
+#bottom-nav {
+  background: var(--surface);
+  border-top: var(--bw) solid var(--border);
+  padding-bottom: var(--safe-b);
+  flex-shrink: 0;
+  z-index: 60;
+}
+.bnav-items {
+  display: flex;
+  height: var(--bottom-nav);
+}
+.bnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.1s, background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  padding: 8px 4px;
+  border-right: 1px solid var(--surface3);
+  border-top: 3px solid transparent;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.bnav-item:last-child { border-right: none; }
+.bnav-item:active { background: var(--surface2); }
+.bnav-item.active { color: var(--text); border-top-color: var(--accent); }
+.bnav-item.active svg { stroke: var(--accent); }
+.bnav-item svg { flex-shrink: 0; }
+
+/* ── Full-screen player overlay ── */
+#full-player {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 100;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+#full-player.open {
+  display: flex;
+  transform: translateY(0);
+}
+
+#fp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 0 0;
+  padding-top: var(--safe-t);
+  flex-shrink: 0;
+  background: var(--blue);
+  border-bottom: var(--bw) solid var(--border);
+  height: calc(48px + var(--safe-t));
+}
+#fp-down-btn {
+  background: none;
+  border: none;
+  border-right: var(--bw) solid rgba(255,255,255,0.3);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0 18px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+#fp-down-btn:active { background: rgba(255,255,255,0.15); }
+#fp-context {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+}
+.fp-spacer { width: 52px; }
+
+#fp-art-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 32px;
+  min-height: 0;
+  background: var(--bg);
+}
+#fp-art {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--bw) solid var(--border);
+  box-shadow: 8px 8px 0 var(--border);
+  transition: transform 0.3s, box-shadow 0.3s;
+  background: var(--surface2);
+}
+#fp-art.playing { transform: scale(1); box-shadow: 8px 8px 0 var(--border); }
+#fp-art.paused  { transform: scale(0.94); box-shadow: 4px 4px 0 var(--border); }
+#fp-art canvas  { width: 100%; height: 100%; display: block; }
+
+#fp-info {
+  padding: 0;
+  flex-shrink: 0;
+  border-top: var(--bw) solid var(--border);
+  border-bottom: var(--bw) solid var(--border);
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+}
+#fp-info-text { min-width: 0; padding: 14px 18px; flex: 1; }
+#fp-title  { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.04em; }
+#fp-artist { font-size: 12px; color: var(--text3); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#fp-add-btn {
+  background: var(--accent2);
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--border);
+  cursor: pointer;
+  padding: 0 20px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+}
+#fp-add-btn:active { background: var(--accent); color: #fff; }
+
+#fp-progress-area {
+  padding: 18px 24px 10px;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+#fp-progress-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  margin-bottom: 10px;
+}
+#fp-progress-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 0%;
+  transition: width 0.3s linear;
+  pointer-events: none;
+  position: relative;
+}
+#fp-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -5px; top: 50%;
+  transform: translateY(-50%);
+  width: 10px; height: 16px;
+  background: var(--border);
+}
+.fp-times {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+}
+
+#fp-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  flex-shrink: 0;
+  border-top: var(--bw) solid var(--border);
+  background: var(--surface);
+}
+.fp-secondary-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: var(--bw) solid var(--border);
+}
+.fp-main-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+.fp-ctrl {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s, color 0.1s;
+}
+.fp-ctrl:active { background: var(--surface2); }
+.fp-ctrl.active { color: var(--accent); background: var(--bg); }
+.fp-ctrl-sm {
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  border-right: var(--bw) solid var(--border);
+}
+.fp-ctrl-sm:last-child { border-right: none; }
+.fp-ctrl-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3);
+  transition: color 0.1s;
+}
+.fp-ctrl-sm.active .fp-ctrl-label { color: var(--accent); }
+
+#fp-play-btn {
+  width: 72px; height: 72px;
+  background: var(--accent);
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  border-right: var(--bw) solid var(--border);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+#fp-play-btn:active { background: var(--accent-dim); }
+
+.fp-ctrl-nav {
+  flex: 1;
+  justify-content: center;
+}
+
+#fp-vol {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  padding-bottom: var(--safe-b);
+  flex-shrink: 0;
+  border-top: var(--bw) solid var(--border);
+  background: var(--bg);
+  height: calc(44px + var(--safe-b));
+}
+#fp-vol svg { color: var(--text3); flex-shrink: 0; padding: 0 16px; }
+#fp-vol-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  margin: 0 16px;
+}
+#fp-vol-fill {
+  height: 100%;
+  background: var(--blue);
+  width: 80%;
+  pointer-events: none;
+}
+
+/* ── Downloads / Offline Storage ── */
+.dl-track-btn {
+  background: none;
+  border: none;
+  border-left: 2px solid var(--surface3);
+  color: var(--text3);
+  cursor: pointer;
+  width: 44px;
+  height: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+.dl-track-btn:active { background: var(--surface2); }
+.dl-track-btn.saved { color: var(--blue); }
+.dl-track-btn.saving { color: var(--accent2); animation: dlpulse 0.8s ease-in-out infinite alternate; }
+@keyframes dlpulse { from { opacity: 1; } to { opacity: 0.3; } }
+
+.save-collection-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--blue);
+  border: var(--bw) solid var(--border);
+  color: #fff;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background 0.1s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.save-collection-btn:active { background: #0d2070; }
+.save-collection-btn.all-saved { background: var(--surface3); color: var(--text3); border-color: var(--surface3); }
+
+#dl-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,13,13,0.8);
+  z-index: 4000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+#dl-overlay.visible { display: flex; }
+#dl-box {
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  box-shadow: 6px 6px 0 var(--border);
+  padding: 28px;
+  width: 100%;
+  max-width: 300px;
+}
+#dl-box-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+#dl-box-sub {
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3);
+  margin-bottom: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#dl-bar-wrap {
+  width: 100%;
+  height: 12px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  margin-bottom: 8px;
+}
+#dl-bar { height: 100%; background: var(--blue); width: 0%; transition: width 0.2s; }
+#dl-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.saved-entry-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: var(--bw) solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+  min-height: 64px;
+}
+.saved-entry-row:active { background: var(--surface2); }
+.saved-entry-icon {
+  width: 64px;
+  background: var(--blue);
+  border-right: var(--bw) solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.saved-entry-text { padding: 0 14px; flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.saved-entry-name { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.saved-entry-sub { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'IBM Plex Mono', monospace; }
+.saved-entry-del {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--text3);
+  font-size: 20px;
+  padding: 0 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+}
+.saved-entry-del:active { background: var(--surface2); color: var(--red); }
+
+@media (max-width: 768px) {
+  .track-row { grid-template-columns: 40px 1fr 44px 44px !important; }
+}
+
+/* ── Speaker / Cast ── */
+#speaker-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,13,13,0.7);
+  z-index: 5000;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--safe-b);
+}
+#speaker-modal.visible { display: flex; }
+#speaker-sheet {
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  border-bottom: none;
+  box-shadow: 0 -6px 0 var(--border);
+  width: 100%;
+  max-width: 480px;
+  padding-bottom: var(--safe-b);
+}
+#speaker-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border-bottom: var(--bw) solid var(--border);
+  height: 52px;
+}
+#speaker-sheet-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  padding: 0 18px;
+}
+#speaker-close-btn {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--text3);
+  font-size: 22px;
+  padding: 0 18px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+#speaker-close-btn:active { background: var(--surface2); }
+
+.speaker-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 12px 18px 6px;
+  border-bottom: 1px solid var(--surface3);
+}
+.speaker-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--surface3);
+  cursor: pointer;
+  min-height: 56px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.speaker-row:active { background: var(--surface2); }
+.speaker-row.active-speaker { background: var(--bg); border-left: 4px solid var(--blue); }
+.speaker-icon {
+  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.speaker-row.active-speaker .speaker-icon { color: var(--blue); }
+.speaker-info { flex: 1; padding: 0 14px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.speaker-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.speaker-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+.speaker-action {
+  background: none;
+  border: none;
+  border-left: 1px solid var(--surface3);
+  color: var(--text3);
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.speaker-action:active { background: var(--surface2); color: var(--text); }
+.speaker-action.connect { color: var(--blue); }
+.speaker-action.disconnect { color: var(--red); }
+
+#sonos-bridge-input-wrap {
+  padding: 12px 18px;
+  border-bottom: var(--bw) solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#sonos-bridge-input {
+  flex: 1;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  padding: 8px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+#sonos-bridge-input:focus { border-color: var(--blue); }
+#sonos-connect-btn {
+  background: var(--blue);
+  border: 2px solid var(--border);
+  color: #fff;
+  padding: 8px 14px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#sonos-connect-btn:active { background: #0d2070; }
+
+/* Cast button in full player header */
+#fp-cast-btn {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, background 0.15s;
+}
+#fp-cast-btn:active { background: rgba(255,255,255,0.15); }
+#fp-cast-btn.casting { color: var(--accent2); }
+
+/* Desktop cast button */
+#desktop-cast-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.1s;
+  height: 100%;
+  border-left: var(--bw) solid var(--border);
+}
+#desktop-cast-btn:hover { color: var(--blue); }
+#desktop-cast-btn.casting { color: var(--blue); }
+
+/* ── Settings screen ── */
+#settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 6000;
+  display: none;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+}
+#settings-overlay.open { display: flex; transform: translateY(0); }
+
+#settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--safe-t);
+  background: var(--surface);
+  border-bottom: var(--bw) solid var(--border);
+  flex-shrink: 0;
+  height: calc(52px + var(--safe-t));
+}
+#settings-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  padding: 0 20px;
+}
+#settings-close-btn {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--text3);
+  font-size: 22px;
+  padding: 0 18px;
+  height: 52px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+#settings-close-btn:active { background: var(--surface2); }
+
+#settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 20px 20px 10px;
+  border-bottom: 1px solid var(--surface3);
+}
+
+/* Skin grid */
+#skin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  border-top: var(--bw) solid var(--border);
+  border-left: var(--bw) solid var(--border);
+}
+@media (min-width: 500px) { #skin-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 769px) { #skin-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.skin-card {
+  border-right: var(--bw) solid var(--border);
+  border-bottom: var(--bw) solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+  padding: 14px 12px 12px;
+  position: relative;
+  background: var(--surface);
+}
+.skin-card:active { background: var(--surface2); }
+.skin-card.active { background: var(--bg); }
+
+.skin-card-active-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.skin-card.active .skin-card-active-bar { opacity: 1; }
+
+.skin-preview {
+  display: flex;
+  height: 52px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(0,0,0,0.15);
+}
+.skin-preview-col { flex: 1; }
+
+.skin-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skin-card-desc {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skin-card.active .skin-card-name { color: var(--accent); }
+
+/* Settings gear button */
+.settings-gear-btn {
+  background: none;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  padding: 0 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transition: color 0.1s, background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.settings-gear-btn:hover, .settings-gear-btn:active { color: var(--accent); background: var(--surface2); }
+
+/* Mobile gear in topbar */
+.mob-icon-btn.settings-gear-mob {
+  border-left: var(--bw) solid rgba(255,255,255,0.3);
+}
+</style>
+
+</head>
+<body>
+
+<!-- ═══════ MOBILE TOP BAR ═══════ -->
+<div id="mobile-topbar">
+  <span class="mob-logo">Sonata</span>
+  <div style="flex:1"></div>
+  <button class="mob-icon-btn" id="mob-search-toggle" title="Search">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </button>
+  <button class="mob-icon-btn" id="mob-refresh-btn" title="Refresh library">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+  </button>
+  <button class="mob-icon-btn settings-gear-mob" id="mob-settings-btn" title="Settings">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</div>
+
+<!-- ═══════ MOBILE SEARCH BAR ═══════ -->
+<div id="mobile-search-bar">
+  <div class="mob-search-wrap">
+    <svg class="mob-search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="mob-search" placeholder="Search…">
+  </div>
+</div>
+
+<!-- ═══════ APP LAYOUT ═══════ -->
+<div id="app">
+  <!-- Sidebar (desktop) -->
+  <nav id="sidebar">
+    <div class="logo">
+      <div class="logo-word">Sonata</div>
+      <div class="logo-sub">Personal Library</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Library</div>
+      <div class="nav-item active" data-view="all">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        All Tracks
+      </div>
+      <div class="nav-item" data-view="artists">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        Artists
+      </div>
+      <div class="nav-item" data-view="albums">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        Albums
+      </div>
+      <div class="nav-item" data-view="genres">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Genres
+      </div>
+      <div class="nav-item" data-view="compilations">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Compilations
+      </div>
+      <div class="nav-item" data-view="djmixes">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+        DJ Mixes
+      </div>
+    </div>
+    <div class="nav-section" style="border-top:1px solid var(--border); margin-top:8px;">
+      <div class="nav-label" style="padding-top:18px">Playlists</div>
+      <div id="playlist-list" class="playlist-section" style="margin-top:0; border-top:none;"></div>
+      <div class="new-playlist-btn" id="new-playlist-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New playlist
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div id="main">
+    <!-- Desktop top bar -->
+    <div id="topbar">
+      <div id="search-wrap">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search" placeholder="Search tracks, artists, albums…">
+      </div>
+      <button id="load-btn" title="Refresh library from Jellyfin">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </button>
+      <button class="settings-gear-btn" id="desktop-settings-btn" title="Settings">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+
+    </div>
+
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- ═══════ DESKTOP PLAYER ═══════ -->
+<div id="player">
+  <div id="now-playing">
+    <div id="np-art"><canvas id="np-canvas" width="48" height="48"></canvas></div>
+    <div id="np-text">
+      <div id="np-title" style="color:var(--text3)">Nothing playing</div>
+      <div id="np-artist"></div>
+    </div>
+  </div>
+  <div id="controls">
+    <div class="ctrl-btns">
+      <button class="ctrl-btn" id="shuffle-btn" title="Shuffle">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      </button>
+      <button class="ctrl-btn" id="prev-btn">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button id="play-btn">
+        <svg id="play-icon" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg id="pause-icon" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="ctrl-btn" id="next-btn">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button class="ctrl-btn" id="repeat-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </button>
+    </div>
+    <div class="progress-row">
+      <span class="time-label" id="cur-time">0:00</span>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+      <span class="time-label right" id="dur-time">0:00</span>
+    </div>
+  </div>
+  <div id="vol-area">
+    <button class="vol-btn" id="mute-btn">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" id="vol-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    </button>
+    <div id="vol-bar"><div id="vol-fill"></div></div>
+    <button id="desktop-cast-btn" title="Play on speaker">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>
+      Cast
+    </button>
+  </div>
+</div>
+
+<!-- ═══════ MINI PLAYER (mobile) ═══════ -->
+<div id="mini-player">
+  <div id="mini-art"><canvas id="mini-canvas" width="42" height="42"></canvas></div>
+  <div id="mini-text">
+    <div id="mini-title" style="color:var(--text3)">Nothing playing</div>
+    <div id="mini-artist"></div>
+  </div>
+  <button class="mini-ctrl" id="mini-prev-btn">
+    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+  </button>
+  <button id="mini-play-btn">
+    <svg id="mini-play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <svg id="mini-pause-icon" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  </button>
+  <button class="mini-ctrl" id="mini-next-btn">
+    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+  </button>
+  <div id="mini-progress"><div id="mini-progress-fill"></div></div>
+</div>
+
+<!-- ═══════ BOTTOM NAV (mobile) ═══════ -->
+<div id="bottom-nav">
+  <div class="bnav-items">
+    <div class="bnav-item active" data-view="all">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      Songs
+    </div>
+    <div class="bnav-item" data-view="artists">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      Artists
+    </div>
+    <div class="bnav-item" data-view="albums">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      Albums
+    </div>
+    <div class="bnav-item" data-view="genres">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Genres
+    </div>
+    <div class="bnav-item" data-view="mixes-mobile">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      Mixes
+    </div>
+    <div class="bnav-item" data-view="playlists-mobile">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Library
+    </div>
+    <div class="bnav-item" data-view="saved">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Saved
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ FULL-SCREEN PLAYER (mobile) ═══════ -->
+<div id="full-player">
+  <div id="fp-header">
+    <button id="fp-down-btn">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div id="fp-context">Now Playing</div>
+    <button id="fp-cast-btn" title="Play on speaker">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>
+    </button>
+  </div>
+
+  <div id="fp-art-wrap">
+    <div id="fp-art" class="paused">
+      <canvas id="fp-canvas" width="320" height="320"></canvas>
+    </div>
+  </div>
+
+  <div id="fp-info">
+    <div id="fp-info-text">
+      <div id="fp-title">Nothing playing</div>
+      <div id="fp-artist"></div>
+    </div>
+    <button id="fp-add-btn" title="Add to playlist">+</button>
+  </div>
+
+  <div id="fp-progress-area">
+    <div id="fp-progress-bar"><div id="fp-progress-fill"></div></div>
+    <div class="fp-times">
+      <span id="fp-cur-time">0:00</span>
+      <span id="fp-dur-time">0:00</span>
+    </div>
+  </div>
+
+  <div id="fp-controls">
+    <div class="fp-secondary-row">
+      <button class="fp-ctrl fp-ctrl-sm" id="fp-shuffle-btn" title="Shuffle">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        <span class="fp-ctrl-label">Shuffle</span>
+      </button>
+      <button class="fp-ctrl fp-ctrl-sm" id="fp-repeat-all-btn" title="Repeat all">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <span class="fp-ctrl-label">Repeat</span>
+      </button>
+      <button class="fp-ctrl fp-ctrl-sm" id="fp-repeat-one-btn" title="Repeat track">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><text x="10" y="14" fill="currentColor" stroke="none" font-size="7" font-family="Outfit,sans-serif" font-weight="600" text-anchor="middle">1</text></svg>
+        <span class="fp-ctrl-label">Once</span>
+      </button>
+    </div>
+    <div class="fp-main-row">
+      <button class="fp-ctrl fp-ctrl-nav" id="fp-prev-btn">
+        <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button id="fp-play-btn">
+        <svg id="fp-play-icon" width="28" height="28" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg id="fp-pause-icon" width="28" height="28" fill="currentColor" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="fp-ctrl fp-ctrl-nav" id="fp-next-btn">
+        <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="fp-vol">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+    <div id="fp-vol-bar"><div id="fp-vol-fill"></div></div>
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+  </div>
+</div>
+
+<!-- ═══════ SPEAKER PICKER ═══════ -->
+<div id="speaker-modal">
+  <div id="speaker-sheet">
+    <div id="speaker-sheet-header">
+      <div id="speaker-sheet-title">Play On</div>
+      <button id="speaker-close-btn">×</button>
+    </div>
+
+    <!-- AirPlay / Chromecast (Remote Playback API) -->
+    <div class="speaker-section-label">AirPlay &amp; Chromecast</div>
+    <div class="speaker-row" id="remote-playback-row">
+      <div class="speaker-icon">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>
+      </div>
+      <div class="speaker-info">
+        <div class="speaker-name">AirPlay / Chromecast</div>
+        <div class="speaker-sub" id="remote-playback-status">Tap to browse devices</div>
+      </div>
+      <button class="speaker-action connect" id="remote-playback-btn">Browse</button>
+    </div>
+
+    <!-- Sonos -->
+    <div class="speaker-section-label">Sonos</div>
+
+    <!-- NAS connection status row -->
+    <div class="speaker-row" id="nas-status-row" style="cursor:default">
+      <div class="speaker-icon" id="nas-status-icon" style="color:var(--text3)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+      </div>
+      <div class="speaker-info">
+        <div class="speaker-name" style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em">NAS</div>
+        <div class="speaker-sub" id="nas-status-text">Not configured</div>
+      </div>
+      <button class="speaker-action connect" id="nas-settings-toggle-btn">Setup</button>
+    </div>
+
+    <!-- Collapsible NAS settings -->
+    <div id="nas-settings-panel" style="display:none;border-bottom:var(--bw) solid var(--border)">
+      <div style="padding:10px 18px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3)">Tailscale IP (preferred)</div>
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--surface3)">
+        <input type="text" id="nas-tailscale-input" placeholder="100.64.x.x:3001"
+          style="flex:1;background:var(--bg);border:none;border-right:2px solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;">
+      </div>
+      <div style="padding:10px 18px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3)">QuickConnect (fallback)</div>
+      <div style="display:flex;gap:0">
+        <input type="text" id="nas-quickconnect-input" placeholder="yourname.quickconnect.to:3001"
+          style="flex:1;background:var(--bg);border:none;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;">
+      </div>
+      <div style="padding:10px 18px;display:flex;gap:8px;border-top:2px solid var(--border)">
+        <button id="nas-save-btn" style="flex:1;background:var(--blue);border:2px solid var(--border);color:#fff;padding:10px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Save &amp; Connect</button>
+        <button id="nas-forget-btn" style="background:none;border:2px solid var(--border);color:var(--text3);padding:10px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">Forget</button>
+      </div>
+    </div>
+
+    <div id="sonos-devices-list">
+      <div class="speaker-row" style="cursor:default">
+        <div class="speaker-icon" style="color:var(--text3)">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="speaker-info">
+          <div class="speaker-sub">Configure NAS connection above to discover Sonos rooms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SETTINGS ═══════ -->
+<div id="settings-overlay">
+  <div id="settings-header">
+    <div id="settings-title">Settings</div>
+    <button id="settings-close-btn">×</button>
+  </div>
+  <div id="settings-body">
+    <div class="settings-section-label">Appearance</div>
+    <div id="skin-grid"></div>
+
+    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Jellyfin Connection</div>
+    <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+        Sonata streams your music from <strong>Jellyfin</strong> running on your NAS.
+        Enter your server address and API key below.
+        Get an API key from <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Jellyfin → Dashboard → API Keys</span>.
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Server URL</div>
+        <input type="text" id="jf-url-input" placeholder="http://192.168.1.83:8096"
+          style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">API Key</div>
+        <input type="text" id="jf-key-input" placeholder="Paste your Jellyfin API key…"
+          style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="jf-connect-btn"
+          style="background:var(--blue);border:var(--bw) solid var(--border);color:#fff;padding:10px 20px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;flex-shrink:0;">
+          Connect &amp; Load
+        </button>
+        <div id="jf-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Not connected</div>
+      </div>
+    </div>
+
+    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Artist Photography</div>
+    <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+        Sonata fetches artist photography from <strong>fanart.tv</strong> automatically. Register free at
+        <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">fanart.tv</span>
+        to get a personal API key, then paste it below.
+      </div>
+      <div style="display:flex;gap:0">
+        <input type="text" id="fanart-api-key-input" placeholder="Paste your fanart.tv API key…"
+          style="flex:1;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;min-width:0;">
+        <button id="fanart-save-btn"
+          style="background:var(--blue);border:var(--bw) solid var(--border);border-left:none;color:#fff;padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+          Save
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+        <div id="fanart-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)">Not configured</div>
+        <button id="fanart-clear-cache-btn"
+          style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
+          Clear image cache
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DOWNLOAD PROGRESS ═══════ -->
+<div id="dl-overlay">
+  <div id="dl-box">
+    <div id="dl-box-title">Saving to Device</div>
+    <div id="dl-box-sub">Preparing…</div>
+    <div id="dl-bar-wrap"><div id="dl-bar"></div></div>
+    <div id="dl-status">0 / 0 tracks</div>
+  </div>
+</div>
+
+<!-- Context menu, modal, loading, toast -->
+<div id="ctx-menu"></div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title">New Playlist</h3>
+    <input type="text" id="modal-input" placeholder="Playlist name…" maxlength="60">
+    <div class="modal-btns">
+      <button class="btn-cancel" id="modal-cancel">Cancel</button>
+      <button class="btn-confirm" id="modal-confirm">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text">Reading files…</div>
+</div>
+
+<div id="toast"></div>
+<audio id="audio"></audio>
+
+<script>
+// ══════════════════════════════════════════════
+//  MOBILE DETECTION
+// ══════════════════════════════════════════════
+const isMobile = () => window.innerWidth <= 768;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+// ══════════════════════════════════════════════
+//  PWA SETUP
+// ══════════════════════════════════════════════
+(function setupPWA() {
+  // Generate a simple icon via canvas
+  const c = document.createElement('canvas');
+  c.width = 192; c.height = 192;
+  const ctx = c.getContext('2d');
+  // White background
+  ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, 192, 192);
+  // Blue block top-left
+  ctx.fillStyle = '#1932a0'; ctx.fillRect(0, 0, 100, 80);
+  // Red block bottom-right
+  ctx.fillStyle = '#d4181b'; ctx.fillRect(110, 100, 82, 92);
+  // Yellow block small
+  ctx.fillStyle = '#f5c518'; ctx.fillRect(0, 150, 80, 42);
+  // Grid lines
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(100, 0, 6, 192); ctx.fillRect(0, 88, 192, 6);
+  ctx.fillRect(104, 0, 6, 192);
+  // S letter
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 52px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('S', 50, 40);
+  const icon192 = c.toDataURL('image/png');
+
+  c.width = 512; c.height = 512;
+  ctx.fillStyle = '#f5f3ee'; ctx.fillRect(0, 0, 512, 512);
+  ctx.fillStyle = '#1932a0'; ctx.fillRect(0, 0, 260, 210);
+  ctx.fillStyle = '#d4181b'; ctx.fillRect(280, 260, 232, 252);
+  ctx.fillStyle = '#f5c518'; ctx.fillRect(0, 400, 200, 112);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(260, 0, 14, 512); ctx.fillRect(0, 226, 512, 14);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 130px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('S', 130, 105);
+  const icon512 = c.toDataURL('image/png');
+
+  const manifest = {
+    name: 'Sonata',
+    short_name: 'Sonata',
+    description: 'Personal music library',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#f5f3ee',
+    theme_color: '#f5f3ee',
+    orientation: 'portrait-primary',
+    icons: [
+      { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+
+  // Apple touch icon
+  const link = document.createElement('link');
+  link.rel = 'apple-touch-icon';
+  link.href = icon192;
+  document.head.appendChild(link);
+})();
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const state = {
+  tracks: [],
+  queue: [],
+  queuePos: -1,
+  _queueTracks: [],
+  currentTrack: null,
+  shuffle: false,
+  repeat: 'none',
+  playing: false,
+  currentView: 'all',
+  drillTarget: null,
+  playlists: [],
+  volume: 0.8,
+  muted: false,
+  searchQ: '',
+  savedIds: new Set(),
+};
+
+try {
+  const saved = localStorage.getItem('sonata_playlists');
+  if (saved) state.playlists = JSON.parse(saved);
+} catch(e) {}
+
+// ══════════════════════════════════════════════
+//  JELLYFIN CONNECTION
+// ══════════════════════════════════════════════
+const jellyfin = {
+  serverUrl: (localStorage.getItem('sonata_jf_url') || '').replace(/\/$/, ''),
+  apiKey:    localStorage.getItem('sonata_jf_key')  || '',
+  userId:    localStorage.getItem('sonata_jf_userid') || '',
+  connected: false,
+};
+
+function jfHeaders() {
+  return {
+    'X-MediaBrowser-Token': jellyfin.apiKey,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function jfGet(path) {
+  const r = await fetch(`${jellyfin.serverUrl}${path}`, { headers: jfHeaders() });
+  if (!r.ok) throw new Error(`Jellyfin ${r.status}: ${r.statusText}`);
+  return r.json();
+}
+
+async function jfPost(path, body) {
+  const r = await fetch(`${jellyfin.serverUrl}${path}`, {
+    method: 'POST',
+    headers: jfHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`Jellyfin ${r.status}: ${r.statusText}`);
+  const text = await r.text();
+  return text ? JSON.parse(text) : {};
+}
+
+async function jfDelete(path) {
+  const r = await fetch(`${jellyfin.serverUrl}${path}`, {
+    method: 'DELETE',
+    headers: jfHeaders(),
+  });
+  if (!r.ok) throw new Error(`Jellyfin ${r.status}: ${r.statusText}`);
+}
+
+// Resolve the Jellyfin userId from the API key if not already cached
+async function resolveJellyfinUser() {
+  if (jellyfin.userId) return true;
+  const data = await jfGet('/Users');
+  if (!data || !data.length) throw new Error('No users found');
+  jellyfin.userId = data[0].Id;
+  localStorage.setItem('sonata_jf_userid', jellyfin.userId);
+  return true;
+}
+
+// Fetch full library from Jellyfin and populate state.tracks (non-saved)
+async function fetchLibrary() {
+  if (!jellyfin.serverUrl || !jellyfin.apiKey) {
+    updateJfStatus('Not configured — open Settings to connect');
+    return;
+  }
+
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
+
+  try {
+    await resolveJellyfinUser();
+
+    document.getElementById('loading-text').textContent = 'Loading library…';
+
+    const fields = 'AlbumArtist,Artists,Genres,ParentId,IndexNumber,RunTimeTicks,AlbumId,AlbumArtistIds';
+    const data = await jfGet(
+      `/Users/${jellyfin.userId}/Items?IncludeItemTypes=Audio&Recursive=true` +
+      `&Fields=${fields}&SortBy=AlbumArtist,Album,IndexNumber,SortName` +
+      `&SortOrder=Ascending&Limit=100000`
+    );
+
+    const items = data.Items || [];
+    document.getElementById('loading-text').textContent = `Processing ${items.length} tracks…`;
+
+    // Remove previously loaded Jellyfin tracks (keep OPFS-saved ones)
+    state.tracks = state.tracks.filter(t => t.saved);
+
+    for (const item of items) {
+      const artId = item.AlbumId || item.Id;
+      const artUrl = `${jellyfin.serverUrl}/Items/${artId}/Images/Primary` +
+                     `?api_key=${encodeURIComponent(jellyfin.apiKey)}&maxHeight=300&quality=90`;
+      const streamUrl = `${jellyfin.serverUrl}/Audio/${item.Id}/stream` +
+                        `?api_key=${encodeURIComponent(jellyfin.apiKey)}&static=true`;
+
+      const artist      = (item.Artists && item.Artists[0]) || item.AlbumArtist || 'Unknown Artist';
+      const albumArtist = item.AlbumArtist || artist;
+
+      state.tracks.push({
+        id:           item.Id,
+        jellyfinId:   item.Id,
+        title:        item.Name || 'Unknown Title',
+        artist,
+        albumArtist,
+        album:        item.Album || 'Unknown Album',
+        genre:        (item.Genres && item.Genres[0]) || '',
+        trackNumber:  item.IndexNumber || 0,
+        duration:     Math.round((item.RunTimeTicks || 0) / 10000000),
+        artSeed:      item.Album || albumArtist || artist || item.Name,
+        artUrl,
+        streamUrl,
+        picture:      null,
+        file:         null,
+        saved:        false,
+      });
+    }
+
+    // Re-merge any saved (OPFS) tracks that match Jellyfin tracks
+    // (they carry a file ref for offline playback but get artUrl/streamUrl from Jellyfin)
+    for (const saved of state.tracks.filter(t => t.saved)) {
+      const jfTrack = state.tracks.find(t => !t.saved && t.id === saved.id);
+      if (jfTrack) {
+        saved.artUrl   = jfTrack.artUrl;
+        saved.streamUrl = jfTrack.streamUrl;
+      }
+    }
+
+    jellyfin.connected = true;
+    updateJfStatus(`Connected · ${items.length.toLocaleString()} tracks`);
+    await fetchJellyfinPlaylists();
+
+  } catch(e) {
+    console.error('Jellyfin fetch error:', e);
+    updateJfStatus(`Error: ${e.message}`);
+    showToast('Could not connect to Jellyfin');
+  }
+
+  document.getElementById('loading').classList.remove('visible');
+  renderView();
+}
+
+function updateJfStatus(msg) {
+  const el = document.getElementById('jf-status');
+  if (el) el.textContent = msg;
+}
+
+// ── Jellyfin Playlists ────────────────────────────────────────────────────────
+async function fetchJellyfinPlaylists() {
+  if (!jellyfin.connected || !jellyfin.userId) return;
+  try {
+    const data = await jfGet(
+      `/Users/${jellyfin.userId}/Items?IncludeItemTypes=Playlist&Recursive=true` +
+      `&SortBy=SortName&SortOrder=Ascending`
+    );
+    const serverPlaylists = data.Items || [];
+
+    // Rebuild playlists from Jellyfin — fetch track IDs for each
+    const newPlaylists = [];
+    for (const pl of serverPlaylists) {
+      try {
+        const items = await jfGet(`/Playlists/${pl.Id}/Items?UserId=${jellyfin.userId}`);
+        newPlaylists.push({
+          id:       pl.Id,
+          name:     pl.Name,
+          trackIds: (items.Items || []).map(i => i.Id),
+          // Store PlaylistItemIds for deletion
+          _entryIds: (items.Items || []).reduce((acc, i) => {
+            acc[i.Id] = i.PlaylistItemId; return acc;
+          }, {}),
+        });
+      } catch(e) { /* skip broken playlist */ }
+    }
+    state.playlists = newPlaylists;
+    renderPlaylists();
+  } catch(e) {
+    console.error('Playlist fetch error:', e);
+  }
+}
+
+async function createJellyfinPlaylist(name) {
+  if (!jellyfin.connected) {
+    // Fall back to local-only playlist
+    return { id: Date.now().toString(), name, trackIds: [], _entryIds: {} };
+  }
+  try {
+    const data = await jfPost('/Playlists', {
+      Name: name,
+      Ids: [],
+      MediaType: 'Audio',
+      UserId: jellyfin.userId,
+    });
+    return { id: data.Id, name, trackIds: [], _entryIds: {} };
+  } catch(e) {
+    console.error('Create playlist error:', e);
+    return { id: Date.now().toString(), name, trackIds: [], _entryIds: {} };
+  }
+}
+
+async function addTrackToJellyfinPlaylist(playlist, trackId) {
+  if (!jellyfin.connected || !playlist.id) return;
+  try {
+    await jfPost(`/Playlists/${playlist.id}/Items?Ids=${trackId}&UserId=${jellyfin.userId}`, {});
+    // Refresh entry IDs for this playlist
+    const items = await jfGet(`/Playlists/${playlist.id}/Items?UserId=${jellyfin.userId}`);
+    playlist._entryIds = playlist._entryIds || {};
+    for (const i of (items.Items || [])) {
+      playlist._entryIds[i.Id] = i.PlaylistItemId;
+    }
+  } catch(e) {
+    console.error('Add to playlist error:', e);
+  }
+}
+
+async function deleteJellyfinPlaylist(playlistId) {
+  if (!jellyfin.connected) return;
+  try { await jfDelete(`/Items/${playlistId}`); } catch(e) {}
+}
+
+function savePlaylists() {
+  // Playlists are stored in Jellyfin — localStorage kept only as fallback cache
+  try { localStorage.setItem('sonata_playlists', JSON.stringify(state.playlists)); } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  OFFLINE STORAGE (Origin Private File System)
+// ══════════════════════════════════════════════
+const OPFS_SUPPORTED = typeof navigator !== 'undefined' &&
+  'storage' in navigator && 'getDirectory' in navigator.storage;
+
+async function opfsDir() {
+  const root = await navigator.storage.getDirectory();
+  return root.getDirectoryHandle('sonata', { create: true });
+}
+
+function getSavedMeta() {
+  try { return JSON.parse(localStorage.getItem('sonata_dl_meta') || '{}'); }
+  catch(e) { return {}; }
+}
+function writeSavedMeta(m) {
+  localStorage.setItem('sonata_dl_meta', JSON.stringify(m));
+}
+
+// Auto-load saved (OPFS) tracks on startup
+async function loadSavedTracks() {
+  if (!OPFS_SUPPORTED) return;
+  const meta = getSavedMeta();
+  if (!Object.keys(meta).length) return;
+  let dir;
+  try { dir = await opfsDir(); } catch(e) { return; }
+  const survivors = {};
+  for (const [id, m] of Object.entries(meta)) {
+    try {
+      const fh   = await dir.getFileHandle(m.filename);
+      const file = await fh.getFile();
+      if (!state.tracks.find(x => x.id === id)) {
+        state.tracks.push({
+          ...m,
+          file,
+          picture:   null,
+          artUrl:    m.artUrl || null,
+          streamUrl: m.streamUrl || null,
+          saved:     true,
+        });
+      }
+      state.savedIds.add(id);
+      survivors[id] = m;
+    } catch(e) { /* file gone */ }
+  }
+  writeSavedMeta(survivors);
+  state.tracks.sort((a,b) =>
+    (a.artist+a.album+a.title).toLowerCase()
+      .localeCompare((b.artist+b.album+b.title).toLowerCase())
+  );
+}
+
+// Save a single track's audio file to OPFS (fetches from Jellyfin stream)
+async function saveTrackToDevice(track) {
+  if (!OPFS_SUPPORTED) { showToast('Offline storage not available'); return false; }
+  if (state.savedIds.has(track.id)) return true;
+
+  const url = track.streamUrl || (track.file ? null : null);
+  if (!url && !track.file) { showToast('No stream available for this track'); return false; }
+
+  try {
+    const dir = await opfsDir();
+    const filename = `${track.id}.mp3`;
+    const fh = await dir.getFileHandle(filename, { create: true });
+    const w  = await fh.createWritable();
+
+    if (track.file) {
+      // Already have a File object (shouldn't happen in Jellyfin mode, but handle it)
+      await w.write(track.file);
+    } else {
+      // Fetch from Jellyfin
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Stream fetch failed');
+      await w.write(await response.arrayBuffer());
+    }
+    await w.close();
+
+    const meta = getSavedMeta();
+    meta[track.id] = {
+      id: track.id, title: track.title, artist: track.artist,
+      album: track.album, albumArtist: track.albumArtist || track.artist,
+      genre: track.genre, duration: track.duration,
+      trackNumber: track.trackNumber, artSeed: track.artSeed,
+      artUrl: track.artUrl || null, streamUrl: track.streamUrl || null,
+      filename,
+    };
+    writeSavedMeta(meta);
+    state.savedIds.add(track.id);
+    track.saved = true;
+    return true;
+  } catch(e) {
+    console.error('Save error:', e);
+    return false;
+  }
+}
+// Remove a track from OPFS
+async function deleteFromDevice(trackId) {
+  const meta = getSavedMeta();
+  const m = meta[trackId];
+  if (!m) return;
+  try {
+    const dir = await opfsDir();
+    await dir.removeEntry(m.filename);
+  } catch(e) {}
+  delete meta[trackId];
+  writeSavedMeta(meta);
+  state.savedIds.delete(trackId);
+  const t = state.tracks.find(x => x.id === trackId);
+  if (t) t.saved = false;
+}
+
+// Save all tracks in a collection (with progress overlay)
+let dlCancelled = false;
+async function saveCollectionToDevice(tracks, label) {
+  if (!OPFS_SUPPORTED) { showToast('Offline storage not available on this browser'); return; }
+  const unsaved = tracks.filter(t => !state.savedIds.has(t.id));
+  if (!unsaved.length) { showToast('All tracks already saved'); return; }
+  dlCancelled = false;
+  showDlOverlay(label, unsaved.length);
+  let done = 0;
+  for (const t of unsaved) {
+    if (dlCancelled) break;
+    document.getElementById('dl-box-sub').textContent = t.title;
+    const ok = await saveTrackToDevice(t);
+    if (ok) done++;
+    updateDlOverlay(done, unsaved.length);
+  }
+  hideDlOverlay();
+  showToast(dlCancelled
+    ? `Saved ${done} track${done !== 1 ? 's' : ''} (cancelled)`
+    : `Saved ${done} track${done !== 1 ? 's' : ''} to device`);
+  renderView();
+}
+
+function showDlOverlay(label, total) {
+  document.getElementById('dl-box-title').textContent = 'Saving to Device';
+  document.getElementById('dl-box-sub').textContent = label;
+  document.getElementById('dl-bar').style.width = '0%';
+  document.getElementById('dl-status').textContent = `0 / ${total} tracks`;
+  document.getElementById('dl-overlay').classList.add('visible');
+}
+function updateDlOverlay(done, total) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('dl-bar').style.width = pct + '%';
+  document.getElementById('dl-status').textContent = `${done} / ${total} tracks`;
+}
+function hideDlOverlay() {
+  document.getElementById('dl-overlay').classList.remove('visible');
+}
+
+let pendingAddTrackId = null;
+
+// ══════════════════════════════════════════════
+//  MONDRIAN ART GENERATOR
+// ══════════════════════════════════════════════
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return Math.abs(h);
+}
+
+function seededRng(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+const MONDRIAN_COLORS = ['#d4181b','#f5c518','#1932a0','#ffffff','#ffffff','#ffffff','#0d0d0d'];
+const MONDRIAN_WEIGHTS = [1,1,1,3,3,3,0.5]; // white appears more often
+
+function pickColor(rng) {
+  const total = MONDRIAN_WEIGHTS.reduce((a,b)=>a+b,0);
+  let r = rng() * total;
+  for (let i = 0; i < MONDRIAN_COLORS.length; i++) {
+    r -= MONDRIAN_WEIGHTS[i];
+    if (r <= 0) return MONDRIAN_COLORS[i];
+  }
+  return '#ffffff';
+}
+
+function drawArt(canvas, seed, size) {
+  const h = hashStr(seed || 'x');
+  const rng = seededRng(h);
+  const ctx = canvas.getContext('2d');
+  canvas.width = size; canvas.height = size;
+  const LINE = Math.max(2, Math.round(size * 0.04));
+
+  // Generate grid division points (2-4 divisions each axis)
+  function genDivs(n) {
+    const pts = [0];
+    for (let i = 0; i < n; i++) pts.push(Math.round((0.15 + rng() * 0.7 + i * 0.05) * size));
+    pts.push(size);
+    return [...new Set(pts)].sort((a,b)=>a-b);
+  }
+  const cols = genDivs(1 + Math.floor(rng() * 2));
+  const rows = genDivs(1 + Math.floor(rng() * 2));
+
+  // Fill cells
+  for (let r = 0; r < rows.length - 1; r++) {
+    for (let c = 0; c < cols.length - 1; c++) {
+      const x = cols[c] + LINE;
+      const y = rows[r] + LINE;
+      const w = cols[c+1] - cols[c] - LINE;
+      const hh = rows[r+1] - rows[r] - LINE;
+      ctx.fillStyle = pickColor(rng);
+      ctx.fillRect(x, y, w, hh);
+    }
+  }
+
+  // Draw grid lines (thick black)
+  ctx.fillStyle = '#0d0d0d';
+  for (const x of cols) ctx.fillRect(x, 0, LINE, size);
+  for (const y of rows) ctx.fillRect(0, y, size, LINE);
+}
+
+function drawArtUrlToCanvas(canvas, url, size, seed) {
+  // Draw Mondrian first, then overlay image once loaded
+  drawArt(canvas, seed, size);
+  if (!url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = size; canvas.height = size;
+    ctx.drawImage(img, 0, 0, size, size);
+  };
+  img.onerror = () => { /* keep Mondrian */ };
+  img.src = url;
+}
+
+function applyArtToCanvas(canvas, track, size) {
+  if (track && track.artUrl) {
+    drawArtUrlToCanvas(canvas, track.artUrl, size, track.artSeed);
+  } else {
+    drawArt(canvas, track ? track.artSeed : '', size);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════
+function formatTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  return `${m}:${Math.floor(s % 60).toString().padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════════════
+//  REFRESH / RECONNECT
+// ══════════════════════════════════════════════
+async function triggerRefresh() {
+  if (!jellyfin.serverUrl || !jellyfin.apiKey) {
+    openSettings();
+    showToast('Configure Jellyfin in Settings first');
+    return;
+  }
+  await fetchLibrary();
+}
+
+document.getElementById('load-btn').onclick      = triggerRefresh;
+document.getElementById('mob-refresh-btn').onclick = triggerRefresh;
+
+// ══════════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════════
+const audio = document.getElementById('audio');
+audio.volume = state.volume;
+
+function playTracksAt(tracks, idx) {
+  state._queueTracks = tracks;
+  if (state.shuffle) {
+    const arr = tracks.map((_,i) => i);
+    for (let i = arr.length-1; i > 0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    const pos = arr.indexOf(idx);
+    if (pos >= 0) { arr.splice(pos,1); arr.unshift(idx); }
+    state.queue = arr; state.queuePos = 0;
+  } else {
+    state.queue = tracks.map((_,i) => i);
+    state.queuePos = idx;
+  }
+  playCurrentQueue();
+}
+
+function playCurrentQueue() {
+  if (state.queuePos < 0 || state.queuePos >= state.queue.length) return;
+  const t = state._queueTracks[state.queue[state.queuePos]];
+  if (!t) return;
+  state.currentTrack = t;
+  // Use OPFS file if saved offline, otherwise stream from Jellyfin
+  if (t.file) {
+    audio.src = URL.createObjectURL(t.file);
+  } else if (t.streamUrl) {
+    audio.src = t.streamUrl;
+  } else {
+    showToast('No stream available for this track');
+    return;
+  }
+  audio.play().catch(() => {});
+}
+
+audio.ontimeupdate = () => {
+  if (!audio.duration) return;
+  const pct = (audio.currentTime / audio.duration) * 100;
+  const w = pct + '%';
+  document.getElementById('progress-fill').style.width = w;
+  document.getElementById('mini-progress-fill').style.width = w;
+  document.getElementById('fp-progress-fill').style.width = w;
+  document.getElementById('cur-time').textContent = formatTime(audio.currentTime);
+  document.getElementById('fp-cur-time').textContent = formatTime(audio.currentTime);
+};
+
+audio.onloadedmetadata = () => {
+  const d = formatTime(audio.duration);
+  document.getElementById('dur-time').textContent = d;
+  document.getElementById('fp-dur-time').textContent = d;
+};
+
+audio.onended = () => {
+  if (state.repeat === 'one') { audio.play(); return; }
+  state.queuePos++;
+  if (state.queuePos >= state.queue.length) {
+    if (state.repeat === 'all') state.queuePos = 0;
+    else { state.playing = false; updateAllPlayerUIs(); return; }
+  }
+  playCurrentQueue();
+  renderView();
+};
+
+audio.onplay  = () => { state.playing = true;  updateAllPlayerUIs(); renderPlayingState(); updateMediaSession(); };
+audio.onpause = () => { state.playing = false; updateAllPlayerUIs(); renderPlayingState(); updateMediaSession(); };
+
+// ── Controls: Desktop ──
+function prevTrack() {
+  if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+  state.queuePos = Math.max(0, state.queuePos - 1);
+  playCurrentQueue(); renderView();
+}
+function nextTrack() {
+  state.queuePos = Math.min(state.queue.length-1, state.queuePos+1);
+  if (state.queuePos < state.queue.length) { playCurrentQueue(); renderView(); }
+}
+function togglePlay() {
+  if (!state.currentTrack) return;
+  state.playing ? audio.pause() : audio.play();
+}
+
+document.getElementById('play-btn').onclick   = togglePlay;
+document.getElementById('prev-btn').onclick   = prevTrack;
+document.getElementById('next-btn').onclick   = nextTrack;
+document.getElementById('mini-play-btn').onclick = (e) => { e.stopPropagation(); togglePlay(); };
+document.getElementById('mini-prev-btn').onclick = (e) => { e.stopPropagation(); prevTrack(); };
+document.getElementById('mini-next-btn').onclick = (e) => { e.stopPropagation(); nextTrack(); };
+document.getElementById('fp-play-btn').onclick = togglePlay;
+document.getElementById('fp-prev-btn').onclick = prevTrack;
+document.getElementById('fp-next-btn').onclick = nextTrack;
+
+// Shuffle
+function toggleShuffle() {
+  state.shuffle = !state.shuffle;
+  ['shuffle-btn','fp-shuffle-btn'].forEach(id => document.getElementById(id).classList.toggle('active', state.shuffle));
+}
+document.getElementById('shuffle-btn').onclick    = toggleShuffle;
+document.getElementById('fp-shuffle-btn').onclick = toggleShuffle;
+
+function toggleRepeatAll() {
+  state.repeat = state.repeat === 'all' ? 'none' : 'all';
+  syncRepeatButtons();
+}
+function toggleRepeatOne() {
+  state.repeat = state.repeat === 'one' ? 'none' : 'one';
+  syncRepeatButtons();
+}
+function syncRepeatButtons() {
+  // Desktop cycling button (still present in desktop player)
+  const desktopBtn = document.getElementById('repeat-btn');
+  if (desktopBtn) {
+    desktopBtn.classList.toggle('active', state.repeat !== 'none');
+    desktopBtn.title = state.repeat === 'one' ? 'Repeat: One' : state.repeat === 'all' ? 'Repeat: All' : 'Repeat: Off';
+  }
+  // Full player separate buttons
+  const allBtn = document.getElementById('fp-repeat-all-btn');
+  const oneBtn = document.getElementById('fp-repeat-one-btn');
+  if (allBtn) allBtn.classList.toggle('active', state.repeat === 'all');
+  if (oneBtn) oneBtn.classList.toggle('active', state.repeat === 'one');
+}
+document.getElementById('repeat-btn').onclick        = () => { const modes = ['none','all','one']; state.repeat = modes[(modes.indexOf(state.repeat)+1) % 3]; syncRepeatButtons(); };
+document.getElementById('fp-repeat-all-btn').onclick = toggleRepeatAll;
+document.getElementById('fp-repeat-one-btn').onclick = toggleRepeatOne;
+
+// Progress bars
+function scrubTo(pct) {
+  if (!audio.duration) return;
+  audio.currentTime = pct * audio.duration;
+}
+function makeScrubHandler(barId) {
+  document.getElementById(barId).onclick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    scrubTo((e.clientX - rect.left) / rect.width);
+  };
+}
+makeScrubHandler('progress-bar');
+makeScrubHandler('fp-progress-bar');
+
+// Volume
+function setVolume(pct) {
+  state.volume = Math.max(0, Math.min(1, pct));
+  audio.volume = state.muted ? 0 : state.volume;
+  document.getElementById('vol-fill').style.width = (state.volume*100)+'%';
+  document.getElementById('fp-vol-fill').style.width = (state.volume*100)+'%';
+}
+document.getElementById('vol-bar').onclick = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  setVolume((e.clientX - rect.left) / rect.width);
+};
+document.getElementById('fp-vol-bar').onclick = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  setVolume((e.clientX - rect.left) / rect.width);
+};
+document.getElementById('mute-btn').onclick = () => {
+  state.muted = !state.muted;
+  audio.volume = state.muted ? 0 : state.volume;
+  document.getElementById('vol-icon').style.opacity = state.muted ? 0.3 : 1;
+};
+
+setVolume(0.8);
+
+// ── Full player (mobile) ──
+document.getElementById('mini-player').onclick = openFullPlayer;
+document.getElementById('fp-down-btn').onclick  = closeFullPlayer;
+
+function openFullPlayer() {
+  if (!state.currentTrack) return;
+  const fp = document.getElementById('full-player');
+  fp.style.display = 'flex';
+  requestAnimationFrame(() => fp.classList.add('open'));
+  updateFullPlayer();
+}
+function closeFullPlayer() {
+  const fp = document.getElementById('full-player');
+  fp.classList.remove('open');
+  setTimeout(() => { fp.style.display = 'none'; }, 400);
+}
+
+// Swipe down to close full player
+let fpTouchStartY = 0;
+document.getElementById('full-player').addEventListener('touchstart', e => { fpTouchStartY = e.touches[0].clientY; }, { passive: true });
+document.getElementById('full-player').addEventListener('touchend', e => {
+  const dy = e.changedTouches[0].clientY - fpTouchStartY;
+  if (dy > 80) closeFullPlayer();
+}, { passive: true });
+
+document.getElementById('fp-add-btn').onclick = () => {
+  if (state.currentTrack) {
+    pendingAddTrackId = state.currentTrack.id;
+    showCtxMenu(window.innerWidth/2 - 90, window.innerHeight/2, 'add-to-playlist');
+  }
+};
+
+function updateFullPlayer() {
+  const t = state.currentTrack;
+  if (!t) return;
+  document.getElementById('fp-title').textContent  = t.title;
+  document.getElementById('fp-artist').textContent = t.artist;
+  applyArtToCanvas(document.getElementById('fp-canvas'), t, 320);
+  document.getElementById('fp-art').className = state.playing ? 'playing' : 'paused';
+}
+
+// ══════════════════════════════════════════════
+//  UI UPDATE
+// ══════════════════════════════════════════════
+function updateAllPlayerUIs() {
+  const p = state.playing;
+
+  // Desktop
+  document.getElementById('play-icon').style.display  = p ? 'none' : '';
+  document.getElementById('pause-icon').style.display = p ? '' : 'none';
+
+  // Mini
+  document.getElementById('mini-play-icon').style.display  = p ? 'none' : '';
+  document.getElementById('mini-pause-icon').style.display = p ? '' : 'none';
+
+  // Full
+  document.getElementById('fp-play-icon').style.display  = p ? 'none' : '';
+  document.getElementById('fp-pause-icon').style.display = p ? '' : 'none';
+  document.getElementById('fp-art').className = p ? 'playing' : 'paused';
+
+  const t = state.currentTrack;
+  if (!t) return;
+
+  // Desktop now playing
+  document.getElementById('np-title').textContent  = t.title;
+  document.getElementById('np-artist').textContent = t.artist;
+  document.getElementById('np-title').style.color  = '';
+  applyArtToCanvas(document.getElementById('np-canvas'), t, 48);
+
+  // Mini player
+  document.getElementById('mini-title').textContent  = t.title;
+  document.getElementById('mini-artist').textContent = t.artist;
+  document.getElementById('mini-title').style.color  = '';
+  applyArtToCanvas(document.getElementById('mini-canvas'), t, 42);
+
+  // Full player
+  document.getElementById('fp-title').textContent  = t.title;
+  document.getElementById('fp-artist').textContent = t.artist;
+  applyArtToCanvas(document.getElementById('fp-canvas'), t, 320);
+}
+
+function renderPlayingState() {
+  document.querySelectorAll('.track-row').forEach(row => {
+    const playing = state.currentTrack && row.dataset.id === state.currentTrack.id;
+    row.classList.toggle('playing', playing);
+    row.classList.toggle('paused-state', playing && !state.playing);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  MEDIA SESSION API
+// ══════════════════════════════════════════════
+function updateMediaSession() {
+  if (!('mediaSession' in navigator) || !state.currentTrack) return;
+  const t = state.currentTrack;
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title:  t.title,
+    artist: t.artist,
+    album:  t.album,
+  });
+
+  navigator.mediaSession.setActionHandler('play',         () => audio.play());
+  navigator.mediaSession.setActionHandler('pause',        () => audio.pause());
+  navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+  navigator.mediaSession.setActionHandler('nexttrack',    nextTrack);
+  navigator.mediaSession.setActionHandler('seekto', (d) => { if (d.seekTime !== undefined) audio.currentTime = d.seekTime; });
+
+  navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function setView(view) {
+  state.currentView = view;
+  state.drillTarget = null;
+  state.searchQ = '';
+
+  // Sync desktop sidebar
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+
+  // Sync bottom nav
+  const bnavMap = {
+    'all': 'all', 'search': 'all',
+    'artists': 'artists', 'albums': 'albums',
+    'genres': 'genres',
+    'compilations': 'mixes-mobile', 'djmixes': 'mixes-mobile', 'mixes-mobile': 'mixes-mobile',
+    'playlists-mobile': 'playlists-mobile', 'playlist': 'playlists-mobile',
+    'saved': 'saved',
+  };
+  const bnav = bnavMap[view] || view;
+  document.querySelectorAll('.bnav-item').forEach(n => n.classList.toggle('active', n.dataset.view === bnav));
+
+  renderView();
+}
+
+document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+  el.onclick = () => setView(el.dataset.view);
+});
+
+document.querySelectorAll('.bnav-item').forEach(el => {
+  el.onclick = () => {
+    const v = el.dataset.view;
+    if (v === 'playlists-mobile') { showMobilePlaylists(); return; }
+    setView(v);
+  };
+});
+
+document.getElementById('new-playlist-btn').onclick = () => showModal('new');
+
+// Search (desktop)
+document.getElementById('search').oninput = (e) => {
+  state.searchQ = e.target.value.toLowerCase().trim();
+  state.currentView = state.searchQ ? 'search' : 'all';
+  state.drillTarget = null;
+  renderView();
+};
+
+// Search (mobile)
+document.getElementById('mob-search-toggle').onclick = () => {
+  const bar = document.getElementById('mobile-search-bar');
+  bar.classList.toggle('visible');
+  if (bar.classList.contains('visible')) {
+    setTimeout(() => document.getElementById('mob-search').focus(), 50);
+  } else {
+    state.searchQ = '';
+    state.currentView = 'all';
+    document.getElementById('mob-search').value = '';
+    renderView();
+  }
+};
+
+document.getElementById('mob-search').oninput = (e) => {
+  state.searchQ = e.target.value.toLowerCase().trim();
+  state.currentView = state.searchQ ? 'search' : 'all';
+  state.drillTarget = null;
+  renderView();
+};
+
+// ══════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════
+function renderView() {
+  const content = document.getElementById('content');
+
+  if (!state.tracks.length) {
+    const isConfigured = jellyfin.serverUrl && jellyfin.apiKey;
+    content.innerHTML = `
+      <div id="empty-state">
+        <div class="empty-icon"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <h2>Your library awaits</h2>
+        <p>${isConfigured ? 'Tap below to load your music from Jellyfin.' : 'Connect Sonata to your Jellyfin server in Settings to get started.'}</p>
+        <button class="empty-load-btn" id="empty-load-btn">${isConfigured ? 'Load Library' : 'Open Settings'}</button>
+      </div>`;
+    document.getElementById('empty-load-btn').onclick = isConfigured ? triggerRefresh : openSettings;
+    return;
+  }
+
+  const v = state.currentView;
+  if (v === 'all' || v === 'search') { renderTrackList(getVisibleTracks()); return; }
+  if (v === 'artists')      { renderArtistView();       return; }
+  if (v === 'albums')       { renderAlbumView();        return; }
+  if (v === 'genres')       { renderGenreView();        return; }
+  if (v === 'compilations') { renderCompilationsView(); return; }
+  if (v === 'djmixes')      { renderDJMixesView();      return; }
+  if (v === 'playlist')     { renderPlaylistView();     return; }
+  if (v === 'playlists-mobile') { renderMobilePlaylistsList(); return; }
+  if (v === 'saved')        { renderSavedView();        return; }
+  if (v === 'mixes-mobile') { renderMixesMobile();      return; }
+}
+
+function getVisibleTracks() {
+  if (state.drillTarget) {
+    const { type, value } = state.drillTarget;
+    let tracks = [];
+    if (type === 'artist')      tracks = state.tracks.filter(t => t.albumArtist === value);
+    else if (type === 'album')  tracks = state.tracks.filter(t => t.album === value);
+    else if (type === 'genre')  tracks = state.tracks.filter(t => t.genre === value);
+    else if (type === 'compilation' || type === 'djmix') tracks = state.tracks.filter(t => t.album === value);
+    // Sort by track number for album/compilation/djmix drilldowns
+    if (type !== 'artist' && type !== 'genre') {
+      tracks = [...tracks].sort((a,b) => (a.trackNumber || 0) - (b.trackNumber || 0));
+    }
+    return tracks;
+  }
+  if (state.searchQ) {
+    return state.tracks.filter(t =>
+      t.title.toLowerCase().includes(state.searchQ) ||
+      t.artist.toLowerCase().includes(state.searchQ) ||
+      t.album.toLowerCase().includes(state.searchQ)
+    );
+  }
+  return state.tracks;
+}
+
+function renderTrackList(tracks) {
+  const content = document.getElementById('content');
+  let title = 'All Tracks';
+  if (state.drillTarget) title = state.drillTarget.value;
+  else if (state.searchQ) title = `"${state.searchQ}"`;
+
+  const mob = isMobile();
+  const isDrill = !!state.drillTarget;
+
+  const rows = tracks.map((t, i) => {
+    const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
+    const playing = isPlaying && state.playing;
+    const isSaved = state.savedIds.has(t.id);
+    const dlIcon = isSaved
+      ? `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+      : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+    return `
+    <div class="track-row${isPlaying ? ' playing'+(playing?'':' paused-state') : ''}" data-id="${t.id}" data-idx="${i}">
+      <div class="track-num">
+        <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <span class="track-num-val">${i+1}</span>
+      </div>
+      <div class="track-info">
+        <div class="track-title">${esc(t.title)}</div>
+        <div class="track-artist-sm">${esc(t.artist)}</div>
+      </div>
+      ${mob ? '' : `<div class="track-album-col">${esc(t.album)}</div>`}
+      ${mob ? '' : `<div class="track-dur">${formatTime(t.duration)}</div>`}
+      <div class="track-actions">
+        <button class="add-to-btn" data-id="${t.id}" title="Add to playlist">+</button>
+        ${mob ? `<button class="dl-track-btn${isSaved ? ' saved' : ''}" data-id="${t.id}" title="${isSaved ? 'Saved' : 'Save to device'}">${dlIcon}</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Save-all button for drill-down views on mobile
+  const allSaved = isDrill && mob && tracks.length > 0 && tracks.every(t => state.savedIds.has(t.id));
+  const saveAllBtn = (isDrill && mob) ? `
+    <button class="save-collection-btn${allSaved ? ' all-saved' : ''}" id="save-all-btn">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      ${allSaved ? 'All Saved' : 'Save All'}
+    </button>` : '';
+
+  const backBtn = isDrill ? `
+    <button class="back-btn" id="back-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>` : '';
+
+  content.innerHTML = `
+    ${backBtn}
+    <div class="section-header" style="justify-content:space-between;align-items:center">
+      <span class="section-title">${esc(title)}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="section-count">${tracks.length} track${tracks.length !== 1 ? 's' : ''}</span>
+        ${saveAllBtn}
+      </div>
+    </div>
+    ${mob ? '' : `<div class="track-list-header"><div>#</div><div>Title</div><div>Album</div><div style="text-align:right">Duration</div><div></div></div>`}
+    <div id="track-list">${rows}</div>`;
+
+  if (document.getElementById('back-btn')) {
+    document.getElementById('back-btn').onclick = () => { state.drillTarget = null; renderView(); };
+  }
+  if (document.getElementById('save-all-btn')) {
+    document.getElementById('save-all-btn').onclick = () => saveCollectionToDevice(tracks, title);
+  }
+
+  content.querySelectorAll('.track-row').forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.closest('.add-to-btn') || e.target.closest('.dl-track-btn')) return;
+      const idx = parseInt(row.dataset.idx);
+      playTracksAt(tracks, idx);
+      renderView();
+    };
+  });
+
+  content.querySelectorAll('.add-to-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      pendingAddTrackId = btn.dataset.id;
+      const r = btn.getBoundingClientRect();
+      showCtxMenu(r.left, r.bottom + 4, 'add-to-playlist');
+    };
+  });
+
+  content.querySelectorAll('.dl-track-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const trackId = btn.dataset.id;
+      if (state.savedIds.has(trackId)) return; // already saved, do nothing on tap
+      const track = state.tracks.find(t => t.id === trackId);
+      if (!track) return;
+      btn.classList.add('saving');
+      const ok = await saveTrackToDevice(track);
+      btn.classList.remove('saving');
+      if (ok) {
+        btn.classList.add('saved');
+        btn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+        showToast(`Saved: ${track.title}`);
+      }
+    };
+  });
+}
+
+// ── Library categorisation helpers ────────────────────────────────────────────
+
+const VA_NAMES = new Set(['various artists', 'va', 'various', 'v/a', 'v.a.', 'v.a', 'unknown artist']);
+
+function isVAName(name) {
+  return VA_NAMES.has((name || '').toLowerCase().trim());
+}
+
+function albumCategory(albumKey) {
+  // albumKey = album + '||' + albumArtist
+  const tracks = getAlbumTracks(albumKey.split('||')[0]);
+  const albumArtist = (albumKey.split('||')[1] || '').toLowerCase().trim();
+
+  if (isVAName(albumArtist)) return 'compilation';
+
+  // Count distinct track artists
+  const distinctArtists = new Set(tracks.map(t => t.artist.toLowerCase().trim()));
+  if (distinctArtists.size >= 3) return 'djmix';
+
+  return 'album';
+}
+
+function getAlbumTracks(albumName) {
+  return state.tracks.filter(t => t.album === albumName);
+}
+
+// ── Artists view (uses albumArtist, filters junk) ─────────────────────────────
+
+function renderArtistView() {
+  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
+  const content = document.getElementById('content');
+
+  // Build map keyed by albumArtist
+  const map = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (isVAName(aa)) continue;
+    if (!map[aa]) map[aa] = { count: 0, seed: t.artSeed };
+    map[aa].count++;
+  }
+
+  // Filter out single-track artists
+  const filtered = Object.entries(map).filter(([,v]) => v.count > 1);
+
+  const photoCache = loadArtistCache();
+
+  const cards = filtered.sort((a,b) => a[0].localeCompare(b[0])).map(([name, info]) => {
+    const cachedImg = photoCache[name]; // URL, null, or undefined
+    const photoEl = cachedImg
+      ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">`
+      : '';
+    return `
+    <div class="grid-card" data-artist="${esc(name)}">
+      <div class="card-art">
+        <canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas>
+        ${photoEl}
+      </div>
+      <div class="card-label">${esc(name)}</div>
+      <div class="card-sublabel">${info.count} track${info.count !== 1 ? 's' : ''}</div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">Artists</span><span class="section-count">${filtered.length} artists</span></div>
+    <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No artists found</div>'}</div>`;
+
+  initArtCanvases();
+
+  // Kick off background fetches for any uncached artists
+  if (artistArt.apiKey) {
+    filtered.forEach(([name]) => {
+      if (photoCache[name] === undefined) {
+        // Not yet fetched — fetch in background and update card when done
+        fetchAndCacheArtistImage(name);
+      }
+    });
+  }
+
+  content.querySelectorAll('.grid-card').forEach(card => {
+    card.onclick = () => { state.drillTarget = { type: 'artist', value: card.dataset.artist }; renderView(); };
+  });
+}
+
+// ── Albums view (proper artist albums only) ───────────────────────────────────
+
+function renderAlbumView() {
+  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
+  const content = document.getElementById('content');
+  const map = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    const cat = albumCategory(t.album + '||' + aa);
+    if (cat !== 'album') continue; // compilations and mixes have their own views
+    const key = t.album + '||' + aa;
+    if (!map[key]) map[key] = { album: t.album, artist: aa, count: 0, seed: t.artSeed };
+    map[key].count++;
+  }
+
+  const cards = Object.values(map).sort((a,b) => a.album.localeCompare(b.album)).map(info => {
+    const albumTracks = getAlbumTracks(info.album);
+    const allSaved = albumTracks.length > 0 && albumTracks.every(t => state.savedIds.has(t.id));
+    return `
+    <div class="grid-card" data-album="${esc(info.album)}">
+      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+      <div class="card-label">${esc(info.album)}</div>
+      <div class="card-sublabel" style="display:flex;align-items:center;justify-content:space-between">
+        <span>${esc(info.artist)}</span>
+        ${isMobile() ? `<button class="card-dl-btn" data-album="${esc(info.album)}" style="background:none;border:none;padding:4px;cursor:pointer;color:${allSaved ? 'var(--blue)' : 'var(--text3)'};" title="${allSaved ? 'Saved' : 'Save album'}">
+          ${allSaved
+            ? `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+            : `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`
+          }</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">Albums</span><span class="section-count">${Object.keys(map).length} albums</span></div>
+    <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No albums found</div>'}</div>`;
+
+  initArtCanvases();
+  content.querySelectorAll('.grid-card').forEach(card => {
+    card.onclick = () => { state.drillTarget = { type: 'album', value: card.dataset.album }; renderView(); };
+  });
+
+  content.querySelectorAll('.card-dl-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const albumTracks = getAlbumTracks(btn.dataset.album);
+      saveCollectionToDevice(albumTracks, btn.dataset.album);
+    };
+  });
+}
+
+// ── Compilations view ─────────────────────────────────────────────────────────
+
+function renderCompilationsView() {
+  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
+  const content = document.getElementById('content');
+  const map = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (!isVAName(aa)) continue;
+    if (!map[t.album]) map[t.album] = { album: t.album, count: 0, seed: t.artSeed };
+    map[t.album].count++;
+  }
+
+  const cards = Object.values(map).sort((a,b) => a.album.localeCompare(b.album)).map(info => `
+    <div class="grid-card" data-album="${esc(info.album)}" data-type="compilation">
+      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+      <div class="card-label">${esc(info.album)}</div>
+      <div class="card-sublabel">${info.count} track${info.count !== 1 ? 's' : ''}</div>
+    </div>`).join('');
+
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">Compilations</span><span class="section-count">${Object.keys(map).length} albums</span></div>
+    <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No compilations found. Tag your compilation albums with Album Artist "Various Artists" in Picard or Mp3tag.</div>'}</div>`;
+
+  initArtCanvases();
+  content.querySelectorAll('.grid-card').forEach(card => {
+    card.onclick = () => { state.drillTarget = { type: 'compilation', value: card.dataset.album }; renderView(); };
+  });
+}
+
+// ── DJ Mixes view ─────────────────────────────────────────────────────────────
+// Level 1: grid of DJs (album artists with mixes)
+// Level 2: click a DJ → see their mixes as album cards
+// Click a mix → plays immediately, no track list shown
+
+function renderDJMixesView() {
+  const content = document.getElementById('content');
+
+  // Build full map: DJ → array of mixes, each mix → array of tracks
+  const djMap = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (isVAName(aa)) continue;
+    const cat = albumCategory(t.album + '||' + aa);
+    if (cat !== 'djmix') continue;
+    if (!djMap[aa]) djMap[aa] = {};
+    const key = t.album;
+    if (!djMap[aa][key]) djMap[aa][key] = { album: t.album, artist: aa, tracks: [], seed: t.artSeed };
+    djMap[aa][key].tracks.push(t);
+  }
+  // Sort tracks within each mix by track number
+  for (const dj of Object.values(djMap))
+    for (const mix of Object.values(dj))
+      mix.tracks.sort((a,b) => (a.trackNumber||0) - (b.trackNumber||0));
+
+  // ── Level 2: show mixes for a selected DJ ──
+  if (state.drillTarget && state.drillTarget.type === 'djartist') {
+    const djName = state.drillTarget.value;
+    const mixes = Object.values(djMap[djName] || {}).sort((a,b) => a.album.localeCompare(b.album));
+    const cards = mixes.map(info => `
+      <div class="grid-card" data-album="${esc(info.album)}" data-dj="${esc(info.artist)}">
+        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+        <div class="card-label">${esc(info.album)}</div>
+        <div class="card-sublabel">${mixes.length > 1 ? info.tracks.length + ' tracks' : ''}</div>
+      </div>`).join('');
+
+    content.innerHTML = `
+      <div class="section-header" style="justify-content:space-between;align-items:center">
+        <span class="section-title">${esc(djName)}</span>
+        <span class="section-count">${mixes.length} mix${mixes.length !== 1 ? 'es' : ''}</span>
+      </div>
+      <button class="back-btn" id="back-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        DJ Mixes
+      </button>
+      <div class="grid-view">${cards}</div>`;
+
+    initArtCanvases();
+    document.getElementById('back-btn').onclick = () => { state.drillTarget = null; renderView(); };
+    content.querySelectorAll('.grid-card').forEach(card => {
+      card.onclick = () => {
+        const album = card.dataset.album;
+        const dj    = card.dataset.dj;
+        const tracks = (djMap[dj]?.[album]?.tracks) || [];
+        if (tracks.length) playTracksAt(tracks, 0);
+      };
+    });
+    return;
+  }
+
+  // ── Level 1: grid of DJs ──
+  const djList = Object.entries(djMap).sort((a,b) => a[0].localeCompare(b[0]));
+  const empty = '<div style="padding:24px;color:var(--text3);font-size:13px">No DJ mixes found. A mix is detected when the Album Artist is a named person but 3 or more different track artists appear on the album.</div>';
+
+  const cards = djList.map(([djName, mixes]) => {
+    const mixList  = Object.values(mixes);
+    const seed     = mixList[0]?.seed || djName;
+    const mixCount = mixList.length;
+    return `
+      <div class="grid-card" data-dj="${esc(djName)}">
+        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(seed)}" data-size="160"></canvas></div>
+        <div class="card-label">${esc(djName)}</div>
+        <div class="card-sublabel">${mixCount} mix${mixCount !== 1 ? 'es' : ''}</div>
+      </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">DJ Mixes</span><span class="section-count">${djList.length} DJ${djList.length !== 1 ? 's' : ''}</span></div>
+    <div class="grid-view">${cards || empty}</div>`;
+
+  initArtCanvases();
+  content.querySelectorAll('.grid-card').forEach(card => {
+    card.onclick = () => {
+      state.drillTarget = { type: 'djartist', value: card.dataset.dj };
+      renderView();
+    };
+  });
+}
+
+// ── Mobile combined Mixes screen (Compilations + DJ Mixes) ───────────────────
+
+function renderMixesMobile() {
+  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
+  const content = document.getElementById('content');
+
+  // Count compilations
+  const compMap = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (isVAName(aa)) { compMap[t.album] = true; }
+  }
+  const compCount = Object.keys(compMap).length;
+
+  // Count DJ mixes
+  const mixMap = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (isVAName(aa)) continue;
+    const cat = albumCategory(t.album + '||' + aa);
+    if (cat === 'djmix') mixMap[t.album] = true;
+  }
+  const mixCount = Object.keys(mixMap).length;
+
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">Mixes</span></div>
+    <div class="saved-entry-row" id="mob-compilations-row">
+      <div class="saved-entry-icon" style="background:var(--accent)">
+        <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </div>
+      <div class="saved-entry-text">
+        <div class="saved-entry-name">Compilations</div>
+        <div class="saved-entry-sub">${compCount} album${compCount !== 1 ? 's' : ''}</div>
+      </div>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="padding:0 18px;flex-shrink:0;color:var(--text3)"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="saved-entry-row" id="mob-djmixes-row">
+      <div class="saved-entry-icon" style="background:var(--blue)">
+        <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      </div>
+      <div class="saved-entry-text">
+        <div class="saved-entry-name">DJ Mixes</div>
+        <div class="saved-entry-sub">${mixCount} mix${mixCount !== 1 ? 'es' : ''}</div>
+      </div>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="padding:0 18px;flex-shrink:0;color:var(--text3)"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+
+  document.getElementById('mob-compilations-row').onclick = () => {
+    state.currentView = 'compilations';
+    state.drillTarget = null;
+    renderView();
+  };
+  document.getElementById('mob-djmixes-row').onclick = () => {
+    state.currentView = 'djmixes';
+    state.drillTarget = null;
+    renderView();
+  };
+}
+
+function renderGenreView() {
+  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
+  const content = document.getElementById('content');
+  const map = {};
+  for (const t of state.tracks) { if (!map[t.genre]) map[t.genre] = 0; map[t.genre]++; }
+  const colors = ['#d4181b','#1932a0','#f5c518','#d4181b','#f5f3ee','#1932a0','#d4181b','#f5c518','#1932a0','#d4181b'];
+  const textColors = ['#fff','#fff','#0d0d0d','#fff','#0d0d0d','#fff','#fff','#0d0d0d','#fff','#fff'];
+  const cards = Object.entries(map).sort((a,b) => b[1]-a[1]).map(([name, count], i) => {
+    const c = colors[i % colors.length];
+    const tc = textColors[i % textColors.length];
+    return `
+    <div class="genre-card" data-genre="${esc(name)}" style="background:${c}">
+      <div class="genre-name" style="color:${tc}">${esc(name)}</div>
+      <div class="genre-count" style="color:${tc};opacity:0.7">${count} track${count !== 1 ? 's' : ''}</div>
+    </div>`;
+  }).join('');
+  content.innerHTML = `
+    <div class="section-header"><span class="section-title">Genres</span><span class="section-count">${Object.keys(map).length} genres</span></div>
+    <div class="genre-grid">${cards}</div>`;
+  content.querySelectorAll('.genre-card').forEach(card => {
+    card.onclick = () => { state.drillTarget = { type: 'genre', value: card.dataset.genre }; renderView(); };
+  });
+}
+
+function renderPlaylistView() {
+  const content = document.getElementById('content');
+  const pl = state.playlists.find(p => p.id === state.drillTarget?.value);
+  if (!pl) { setView('all'); return; }
+
+  const tracks = pl.trackIds.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
+  const mob = isMobile();
+
+  const rows = tracks.map((t, i) => {
+    const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
+    return `
+    <div class="track-row${isPlaying ? ' playing' : ''}" data-id="${t.id}" data-idx="${i}">
+      <div class="track-num">
+        <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <span class="track-num-val">${i+1}</span>
+      </div>
+      <div class="track-info">
+        <div class="track-title">${esc(t.title)}</div>
+        <div class="track-artist-sm">${esc(t.artist)}</div>
+      </div>
+      ${mob ? '' : `<div class="track-album-col">${esc(t.album)}</div><div class="track-dur">${formatTime(t.duration)}</div>`}
+      <div class="track-actions">
+        <button class="add-to-btn remove-btn" data-id="${t.id}" title="Remove">×</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const artSeeds = tracks.slice(0,4).map(t => t.artSeed);
+
+  content.innerHTML = `
+    <button class="back-btn" id="back-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Library
+    </button>
+    <div class="playlist-meta">
+      <div class="playlist-header-art">${[0,1,2,3].map(i => `<canvas class="art-canvas" data-seed="${esc(artSeeds[i]||pl.name)}" data-size="75"></canvas>`).join('')}</div>
+      <div class="playlist-meta-text">
+        <div class="playlist-meta-type">Playlist</div>
+        <div class="playlist-meta-name">${esc(pl.name)}</div>
+        <div class="playlist-meta-count">${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+    <div id="track-list">${tracks.length ? rows : `<div style="padding:40px 16px;color:var(--text3);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace">No tracks yet. Use + on any song.</div>`}</div>`;
+
+  initArtCanvases();
+
+  document.getElementById('back-btn').onclick = () => {
+    if (isMobile()) { state.currentView = 'playlists-mobile'; state.drillTarget = null; renderView(); }
+    else { state.currentView = 'all'; state.drillTarget = null; renderView(); }
+  };
+
+  content.querySelectorAll('.track-row').forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.classList.contains('remove-btn')) return;
+      playTracksAt(tracks, parseInt(row.dataset.idx));
+      renderView();
+    };
+  });
+  content.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      pl.trackIds = pl.trackIds.filter(id => id !== btn.dataset.id);
+      savePlaylists(); renderPlaylistView();
+      showToast('Removed from playlist');
+    };
+  });
+}
+
+function renderMobilePlaylistsList() {
+  const content = document.getElementById('content');
+  if (!state.playlists.length) {
+    content.innerHTML = `
+      <div class="section-header"><span class="section-title">Library</span></div>
+      <div style="padding:40px 16px;color:var(--text3);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;border-top:3px solid var(--border)">No playlists yet</div>
+      <div style="padding:0 16px">
+        <button class="empty-load-btn" id="mob-new-pl-btn">+ New Playlist</button>
+      </div>`;
+    document.getElementById('mob-new-pl-btn').onclick = () => showModal('new');
+    return;
+  }
+  const items = state.playlists.map(pl => {
+    const tracks = pl.trackIds.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
+    const seeds = tracks.slice(0,4).map(t => t.artSeed);
+    return `
+    <div class="mob-pl-row" data-id="${pl.id}" style="display:flex;align-items:stretch;gap:0;cursor:pointer;border-bottom:3px solid var(--border);">
+      <div style="width:60px;height:60px;overflow:hidden;flex-shrink:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;background:var(--surface2);border-right:3px solid var(--border)">
+        ${[0,1,2,3].map(i => `<canvas class="art-canvas" data-seed="${esc(seeds[i]||pl.name)}" data-size="30"></canvas>`).join('')}
+      </div>
+      <div style="flex:1;min-width:0;padding:0 14px;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;letter-spacing:0.04em">${esc(pl.name)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:'IBM Plex Mono',monospace">${pl.trackIds.length} track${pl.trackIds.length !== 1 ? 's' : ''}</div>
+      </div>
+      <button class="mob-del-pl" data-id="${pl.id}" style="background:none;border:none;border-left:3px solid var(--border);color:var(--text3);font-size:20px;padding:0 16px;cursor:pointer;flex-shrink:0;">×</button>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="section-header" style="justify-content:space-between">
+      <span class="section-title">Library</span>
+      <button style="background:var(--accent);border:var(--bw) solid var(--border);color:#fff;padding:6px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer" id="mob-new-pl-btn2">+ New</button>
+    </div>
+    ${items}`;
+
+  initArtCanvases();
+  document.getElementById('mob-new-pl-btn2').onclick = () => showModal('new');
+
+  content.querySelectorAll('.mob-pl-row').forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.classList.contains('mob-del-pl')) return;
+      state.currentView = 'playlist';
+      state.drillTarget = { type: 'playlist', value: row.dataset.id };
+      renderView();
+    };
+  });
+  content.querySelectorAll('.mob-del-pl').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const pl = state.playlists.find(p => p.id === btn.dataset.id);
+      if (pl) deleteJellyfinPlaylist(pl.id);
+      state.playlists = state.playlists.filter(p => p.id !== btn.dataset.id);
+      savePlaylists(); renderMobilePlaylistsList(); renderPlaylists();
+    };
+  });
+}
+
+function showMobilePlaylists() {
+  state.currentView = 'playlists-mobile';
+  state.drillTarget = null;
+  document.querySelectorAll('.bnav-item').forEach(n => n.classList.toggle('active', n.dataset.view === 'playlists-mobile'));
+  renderView();
+}
+
+function initArtCanvases() {
+  document.querySelectorAll('.art-canvas').forEach(canvas => {
+    drawArt(canvas, canvas.dataset.seed || '', parseInt(canvas.dataset.size) || 160);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  SIDEBAR PLAYLISTS (desktop)
+// ══════════════════════════════════════════════
+function renderPlaylists() {
+  const list = document.getElementById('playlist-list');
+  if (!state.playlists.length) {
+    list.innerHTML = '<div style="padding:8px 20px;font-size:10px;font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)">None yet</div>';
+    return;
+  }
+  list.innerHTML = state.playlists.map(pl => `
+    <div class="playlist-item${state.currentView === 'playlist' && state.drillTarget?.value === pl.id ? ' active' : ''}" data-id="${pl.id}">
+      <span>${esc(pl.name)}</span>
+      <button class="playlist-delete" data-id="${pl.id}">×</button>
+    </div>`).join('');
+  list.querySelectorAll('.playlist-item').forEach(item => {
+    item.onclick = (e) => {
+      if (e.target.classList.contains('playlist-delete')) return;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      state.currentView = 'playlist';
+      state.drillTarget = { type: 'playlist', value: item.dataset.id };
+      renderPlaylists(); renderView();
+    };
+  });
+  list.querySelectorAll('.playlist-delete').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const pl = state.playlists.find(p => p.id === btn.dataset.id);
+      if (pl) deleteJellyfinPlaylist(pl.id);
+      state.playlists = state.playlists.filter(p => p.id !== btn.dataset.id);
+      savePlaylists();
+      if (state.drillTarget?.value === btn.dataset.id) setView('all');
+      renderPlaylists();
+    };
+  });
+}
+
+// ══════════════════════════════════════════════
+//  CONTEXT MENU
+// ══════════════════════════════════════════════
+const ctxMenu = document.getElementById('ctx-menu');
+
+function showCtxMenu(x, y, type) {
+  ctxMenu.style.display = 'block';
+  ctxMenu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  ctxMenu.style.top  = Math.min(y, window.innerHeight - 320) + 'px';
+
+  if (type === 'add-to-playlist') {
+    const items = state.playlists.map(pl => `
+      <div class="ctx-item" data-pl-id="${pl.id}">+ ${esc(pl.name)}</div>`).join('');
+    ctxMenu.innerHTML = `
+      <div class="ctx-label">Add to playlist</div>
+      ${items || '<div class="ctx-item" style="opacity:0.5;cursor:default">No playlists</div>'}
+      <div class="ctx-divider"></div>
+      <div class="ctx-item" id="ctx-new-pl">+ New playlist…</div>`;
+    ctxMenu.querySelectorAll('[data-pl-id]').forEach(el => {
+      el.onclick = async () => {
+        const pl = state.playlists.find(p => p.id === el.dataset.plId);
+        if (pl && pendingAddTrackId && !pl.trackIds.includes(pendingAddTrackId)) {
+          pl.trackIds.push(pendingAddTrackId);
+          savePlaylists();
+          await addTrackToJellyfinPlaylist(pl, pendingAddTrackId);
+          showToast(`Added to "${pl.name}"`);
+        }
+        hideCtxMenu(); renderPlaylists();
+      };
+    });
+    const nb = document.getElementById('ctx-new-pl');
+    if (nb) nb.onclick = () => { hideCtxMenu(); showModal('new-with-track'); };
+  }
+}
+function hideCtxMenu() { ctxMenu.style.display = 'none'; }
+document.addEventListener('click', (e) => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
+
+// ══════════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════════
+const overlay = document.getElementById('modal-overlay');
+let modalMode = 'new';
+
+function showModal(mode) {
+  modalMode = mode;
+  document.getElementById('modal-input').value = '';
+  overlay.classList.add('visible');
+  setTimeout(() => document.getElementById('modal-input').focus(), 50);
+}
+document.getElementById('modal-cancel').onclick  = () => overlay.classList.remove('visible');
+document.getElementById('modal-confirm').onclick = async () => {
+  const name = document.getElementById('modal-input').value.trim();
+  if (!name) return;
+  overlay.classList.remove('visible');
+  const pl = await createJellyfinPlaylist(name);
+  if (modalMode === 'new-with-track' && pendingAddTrackId) {
+    pl.trackIds.push(pendingAddTrackId);
+    await addTrackToJellyfinPlaylist(pl, pendingAddTrackId);
+  }
+  state.playlists.push(pl);
+  savePlaylists(); renderPlaylists();
+  showToast(`"${name}" created`);
+};
+document.getElementById('modal-input').onkeydown = (e) => {
+  if (e.key === 'Enter')  document.getElementById('modal-confirm').click();
+  if (e.key === 'Escape') overlay.classList.remove('visible');
+};
+overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('visible'); };
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════
+//  SPEAKER OUTPUT (Remote Playback API + Sonos)
+// ══════════════════════════════════════════════
+
+// ── State ──
+const speaker = {
+  remoteState:  'disconnected',
+  sonosRooms:   [],
+  activeRoom:   null,
+  sonosPlaying: false,
+};
+
+// ── Modal open/close ──
+function openSpeakerModal() {
+  loadSonosBridgeUrl();
+  renderSpeakerModal();
+  document.getElementById('speaker-modal').classList.add('visible');
+}
+function closeSpeakerModal() {
+  document.getElementById('speaker-modal').classList.remove('visible');
+}
+document.getElementById('speaker-close-btn').onclick = closeSpeakerModal;
+document.getElementById('speaker-modal').onclick = (e) => {
+  if (e.target === document.getElementById('speaker-modal')) closeSpeakerModal();
+};
+document.getElementById('fp-cast-btn').onclick = openSpeakerModal;
+document.getElementById('desktop-cast-btn').onclick = openSpeakerModal;
+
+function loadSonosBridgeUrl() {
+  const saved = localStorage.getItem('sonata_sonos_bridge') || '';
+  document.getElementById('sonos-bridge-input').value = saved;
+  speaker.sonosBridgeUrl = saved;
+  if (saved) discoverSonosRooms();
+}
+
+// ── Update cast button appearance ──
+function updateCastBtns() {
+  const casting = speaker.remoteState === 'connected' || speaker.activeRoom;
+  ['fp-cast-btn','desktop-cast-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.toggle('casting', !!casting);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  REMOTE PLAYBACK API (AirPlay / Chromecast)
+// ══════════════════════════════════════════════
+const remoteSupported = 'remote' in HTMLMediaElement.prototype;
+
+function setupRemotePlayback() {
+  if (!remoteSupported) return;
+
+  audio.remote.addEventListener('connecting', () => {
+    speaker.remoteState = 'connecting';
+    updateRemotePlaybackRow();
+    updateCastBtns();
+  });
+  audio.remote.addEventListener('connect', () => {
+    speaker.remoteState = 'connected';
+    updateRemotePlaybackRow();
+    updateCastBtns();
+    showToast('Connected to remote device');
+  });
+  audio.remote.addEventListener('disconnect', () => {
+    speaker.remoteState = 'disconnected';
+    updateRemotePlaybackRow();
+    updateCastBtns();
+    showToast('Disconnected from remote device');
+  });
+}
+
+function updateRemotePlaybackRow() {
+  const statusEl = document.getElementById('remote-playback-status');
+  const btnEl    = document.getElementById('remote-playback-btn');
+  const rowEl    = document.getElementById('remote-playback-row');
+  if (!statusEl) return;
+
+  if (!remoteSupported) {
+    statusEl.textContent = 'Not supported in this browser';
+    if (btnEl) btnEl.style.display = 'none';
+    return;
+  }
+
+  const labels = {
+    disconnected: { status: 'Tap to browse devices', btn: 'Browse', cls: 'connect' },
+    connecting:   { status: 'Connecting…',           btn: '…',      cls: '' },
+    connected:    { status: 'Streaming to device',   btn: 'Stop',   cls: 'disconnect' },
+  };
+  const l = labels[speaker.remoteState] || labels.disconnected;
+  statusEl.textContent = l.status;
+  if (btnEl) {
+    btnEl.textContent = l.btn;
+    btnEl.className = `speaker-action ${l.cls}`;
+  }
+  if (rowEl) rowEl.classList.toggle('active-speaker', speaker.remoteState === 'connected');
+}
+
+document.getElementById('remote-playback-btn').onclick = async () => {
+  if (!remoteSupported) { showToast('Remote Playback not supported in this browser'); return; }
+  if (speaker.remoteState === 'connected') {
+    // Disconnect
+    try { await audio.remote.cancelWatchAvailability(); } catch(e) {}
+    speaker.remoteState = 'disconnected';
+    updateRemotePlaybackRow();
+    updateCastBtns();
+    return;
+  }
+  try {
+    await audio.remote.prompt();
+  } catch(e) {
+    if (e.name !== 'AbortError') showToast('Could not open device picker');
+  }
+};
+
+// ══════════════════════════════════════════════
+//  NAS CONNECTION MANAGER
+//  Tries Tailscale first, falls back to QuickConnect silently.
+//  Once resolved the active URL is used for all bridge calls.
+// ══════════════════════════════════════════════
+
+const nas = {
+  tailscaleIP:     localStorage.getItem('sonata_ts_ip')  || '',
+  quickconnectURL: localStorage.getItem('sonata_qc_url') || '',
+  activeURL:       null,   // resolved at connect time
+  method:          null,   // 'tailscale' | 'quickconnect' | null
+  connecting:      false,
+};
+
+// Normalise a host string to a full http:// URL
+function toURL(host) {
+  if (!host) return null;
+  host = host.trim();
+  if (!host) return null;
+  return host.startsWith('http') ? host : `http://${host}`;
+}
+
+// Try to reach a bridge URL — resolves true/false within `timeout` ms
+async function probeURL(url, timeout = 2500) {
+  if (!url) return false;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(`${url}/health`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return r.ok;
+  } catch(e) {
+    return false;
+  }
+}
+
+// Main resolver — tries Tailscale, then QuickConnect, updates nas.activeURL
+async function resolveNasURL() {
+  nas.connecting = true;
+  updateNasStatusRow('connecting', 'Connecting…');
+
+  const tsURL = toURL(nas.tailscaleIP);
+  const qcURL = toURL(nas.quickconnectURL);
+
+  // Try Tailscale first (faster, more direct)
+  if (tsURL) {
+    const ok = await probeURL(tsURL, 2500);
+    if (ok) {
+      nas.activeURL = tsURL;
+      nas.method    = 'tailscale';
+      nas.connecting = false;
+      updateNasStatusRow('connected', 'Via Tailscale');
+      return true;
+    }
+  }
+
+  // Fall back to QuickConnect
+  if (qcURL) {
+    const ok = await probeURL(qcURL, 5000);
+    if (ok) {
+      nas.activeURL = qcURL;
+      nas.method    = 'quickconnect';
+      nas.connecting = false;
+      updateNasStatusRow('connected', 'Via QuickConnect');
+      return true;
+    }
+  }
+
+  // Neither reachable
+  nas.activeURL  = null;
+  nas.method     = null;
+  nas.connecting = false;
+  updateNasStatusRow('error', 'NAS not reachable');
+  return false;
+}
+
+// Update the NAS status row in the speaker sheet
+function updateNasStatusRow(state, text) {
+  const iconEl   = document.getElementById('nas-status-icon');
+  const textEl   = document.getElementById('nas-status-text');
+  const toggleEl = document.getElementById('nas-settings-toggle-btn');
+  if (!textEl) return;
+
+  textEl.textContent = text;
+
+  const colors = { connected: 'var(--blue)', error: 'var(--red)', connecting: 'var(--accent2)', idle: 'var(--text3)' };
+  if (iconEl) iconEl.style.color = colors[state] || colors.idle;
+
+  if (toggleEl) {
+    toggleEl.textContent = state === 'connected' ? 'Change' : 'Setup';
+    toggleEl.className   = `speaker-action ${state === 'connected' ? '' : 'connect'}`;
+  }
+}
+
+// NAS settings toggle
+document.getElementById('nas-settings-toggle-btn').onclick = () => {
+  const panel = document.getElementById('nas-settings-panel');
+  const open  = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (!open) {
+    // Populate inputs from saved values
+    document.getElementById('nas-tailscale-input').value     = nas.tailscaleIP;
+    document.getElementById('nas-quickconnect-input').value  = nas.quickconnectURL;
+  }
+};
+
+// Save & Connect
+document.getElementById('nas-save-btn').onclick = async () => {
+  const ts = document.getElementById('nas-tailscale-input').value.trim();
+  const qc = document.getElementById('nas-quickconnect-input').value.trim();
+  nas.tailscaleIP     = ts;
+  nas.quickconnectURL = qc;
+  localStorage.setItem('sonata_ts_ip',  ts);
+  localStorage.setItem('sonata_qc_url', qc);
+  document.getElementById('nas-settings-panel').style.display = 'none';
+  const ok = await resolveNasURL();
+  if (ok) discoverSonosRooms();
+};
+
+// Forget
+document.getElementById('nas-forget-btn').onclick = () => {
+  nas.tailscaleIP = ''; nas.quickconnectURL = ''; nas.activeURL = null; nas.method = null;
+  localStorage.removeItem('sonata_ts_ip');
+  localStorage.removeItem('sonata_qc_url');
+  document.getElementById('nas-tailscale-input').value    = '';
+  document.getElementById('nas-quickconnect-input').value = '';
+  document.getElementById('nas-settings-panel').style.display = 'none';
+  updateNasStatusRow('idle', 'Not configured');
+  speaker.sonosRooms = [];
+  renderSonosRooms();
+};
+
+// Bridge HTTP helpers — always use nas.activeURL
+async function bridgeGet(path) {
+  if (!nas.activeURL) throw new Error('NAS not connected');
+  const r = await fetch(`${nas.activeURL}${path}`);
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+
+async function bridgePost(path, body) {
+  if (!nas.activeURL) throw new Error('NAS not connected');
+  const r = await fetch(`${nas.activeURL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+
+// Re-resolve connection before any bridge operation (silent, uses cache if recent)
+let lastResolveTime = 0;
+async function ensureConnected() {
+  // Re-probe at most every 30 seconds
+  if (nas.activeURL && (Date.now() - lastResolveTime < 30000)) return true;
+  const ok = await resolveNasURL();
+  if (ok) lastResolveTime = Date.now();
+  return ok;
+}
+
+async function discoverSonosRooms() {
+  const list = document.getElementById('sonos-devices-list');
+  if (list) list.innerHTML = `<div class="speaker-row" style="cursor:default"><div class="speaker-info"><div class="speaker-sub">Discovering Sonos rooms…</div></div></div>`;
+  try {
+    if (!nas.activeURL) {
+      const ok = await resolveNasURL();
+      if (!ok) throw new Error('NAS not reachable');
+    }
+    const data = await bridgeGet('/rooms');
+    speaker.sonosRooms = data.rooms || [];
+    renderSonosRooms();
+  } catch(e) {
+    if (list) list.innerHTML = `<div class="speaker-row" style="cursor:default">
+      <div class="speaker-icon" style="color:var(--red)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+      <div class="speaker-info"><div class="speaker-sub">Could not reach NAS — check your settings</div></div>
+    </div>`;
+  }
+}
+
+function renderSonosRooms() {
+  const list = document.getElementById('sonos-devices-list');
+  if (!list) return;
+  if (!speaker.sonosRooms.length) {
+    list.innerHTML = `<div class="speaker-row" style="cursor:default"><div class="speaker-info"><div class="speaker-sub">No Sonos rooms found</div></div></div>`;
+    return;
+  }
+  list.innerHTML = speaker.sonosRooms.map(room => {
+    const isActive = speaker.activeRoom && speaker.activeRoom.id === room.id;
+    return `
+    <div class="speaker-row${isActive ? ' active-speaker' : ''}" data-room-id="${esc(room.id)}">
+      <div class="speaker-icon">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><line x1="12" y1="6" x2="12" y2="6.01"/></svg>
+      </div>
+      <div class="speaker-info">
+        <div class="speaker-name">${esc(room.name)}</div>
+        <div class="speaker-sub">${isActive ? `Playing · ${nas.method === 'tailscale' ? 'Tailscale' : 'QuickConnect'}` : 'Available'}</div>
+      </div>
+      <button class="speaker-action ${isActive ? 'disconnect' : 'connect'}" data-room-id="${esc(room.id)}">${isActive ? 'Stop' : 'Play'}</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-room-id]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const id   = (el.dataset.roomId || el.closest('[data-room-id]').dataset.roomId);
+      const room = speaker.sonosRooms.find(r => r.id === id);
+      if (!room) return;
+      if (speaker.activeRoom && speaker.activeRoom.id === id) stopSonos();
+      else playSonos(room);
+    };
+  });
+}
+
+async function playSonos(room) {
+  if (!state.currentTrack) { showToast('No track loaded'); return; }
+  const connected = await ensureConnected();
+  if (!connected) { showToast('Cannot reach NAS'); return; }
+
+  speaker.activeRoom = room;
+  audio.pause();
+
+  const streamUrl = state.currentTrack.streamUrl || null;
+
+  try {
+    await bridgePost('/play', {
+      roomId:    room.id,
+      streamUrl, // Jellyfin direct stream URL — Sonos pulls audio itself
+      title:     state.currentTrack.title,
+      artist:    state.currentTrack.artist,
+    });
+    speaker.sonosPlaying = true;
+    updateCastBtns();
+    showToast(`Playing on ${room.name}`);
+    renderSonosRooms();
+  } catch(e) {
+    speaker.activeRoom = null;
+    showToast('Could not reach Sonos bridge');
+    renderSonosRooms();
+  }
+}
+
+async function stopSonos() {
+  if (!speaker.activeRoom) return;
+  try { await bridgePost('/stop', { roomId: speaker.activeRoom.id }); } catch(e) {}
+  speaker.activeRoom   = null;
+  speaker.sonosPlaying = false;
+  updateCastBtns();
+  renderSonosRooms();
+  showToast('Stopped Sonos');
+}
+
+function renderSpeakerModal() {
+  updateRemotePlaybackRow();
+  renderSonosRooms();
+  // Restore saved NAS addresses to inputs if panel is open
+  if (document.getElementById('nas-settings-panel').style.display !== 'none') {
+    document.getElementById('nas-tailscale-input').value    = nas.tailscaleIP;
+    document.getElementById('nas-quickconnect-input').value = nas.quickconnectURL;
+  }
+  // Show current connection status
+  if (nas.activeURL) {
+    updateNasStatusRow('connected', `Via ${nas.method === 'tailscale' ? 'Tailscale' : 'QuickConnect'}`);
+  } else if (nas.tailscaleIP || nas.quickconnectURL) {
+    updateNasStatusRow('idle', 'Tap Setup to reconnect');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  SKIN SYSTEM
+// ══════════════════════════════════════════════
+
+const SKINS = {
+
+  destijl: {
+    name: 'De Stijl',
+    desc: 'Mondrian grid',
+    preview: ['#f5f3ee','#d4181b','#1932a0','#f5c518','#0d0d0d'],
+    vars: {
+      '--bg':'#f5f3ee','--surface':'#ffffff','--surface2':'#eeecea',
+      '--surface3':'#e4e2de','--border':'#0d0d0d','--bw':'3px',
+      '--accent':'#d4181b','--accent2':'#f5c518','--accent-dim':'#8a0e10',
+      '--blue':'#1932a0','--text':'#0d0d0d','--text2':'#333333',
+      '--text3':'#888888','--red':'#d4181b',
+    },
+    css: '', // De Stijl is the CSS default — no overrides needed
+    artColors: ['#d4181b','#f5c518','#1932a0','#ffffff','#ffffff','#ffffff','#0d0d0d'],
+    artWeights: [1,1,1,3,3,3,0.5],
+  },
+
+  noir: {
+    name: 'Noir',
+    desc: 'Dark & moody gold',
+    preview: ['#080a0f','#10131c','#c8964a','#252a3a','#dde0ee'],
+    vars: {
+      '--bg':'#080a0f','--surface':'#10131c','--surface2':'#181c28',
+      '--surface3':'#1f2335','--border':'#252a3a','--bw':'1px',
+      '--accent':'#c8964a','--accent2':'#e8b06a','--accent-dim':'#7a5a2a',
+      '--blue':'#4a7ab8','--text':'#dde0ee','--text2':'#8890aa',
+      '--text3':'#4a5068','--red':'#c05050',
+    },
+    css: `
+      body { font-family: 'Outfit', sans-serif; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title, #fp-context { font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: 0.12em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, .bnav-item, #loading-text { font-family: 'DM Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; }
+      .card-art, .grid-card, .genre-card, .playlist-header-art,
+      #modal, #ctx-menu, #fp-art, #np-art, #mini-art,
+      #speaker-sheet, #dl-box { border-radius: 8px !important; }
+      #fp-art { box-shadow: 0 24px 60px rgba(0,0,0,0.7) !important; }
+      ::-webkit-scrollbar-thumb { border-radius: 3px; }
+    `,
+    artColors: ['#c8964a','#4a7ab8','#1f2335','#181c28','#181c28','#10131c','#dde0ee'],
+    artWeights: [1.5,1,2,2,2,2,0.5],
+  },
+
+  scully: {
+    name: 'Scully',
+    desc: "Pulled from her collar",
+    preview: ['#f0ede4','#7b5ea7','#4a7a52','#3a3842','#faf8f2'],
+    vars: {
+      '--bg':'#f0ede4','--surface':'#faf8f2','--surface2':'#e6e2d6',
+      '--surface3':'#d8d3c4','--border':'#3a3842','--bw':'2px',
+      '--accent':'#7b5ea7','--accent2':'#a07cc8','--accent-dim':'#5a3d82',
+      '--blue':'#4a7a52','--text':'#2a2830','--text2':'#6b6878',
+      '--text3':'#a09aaa','--red':'#c04050',
+    },
+    css: `
+      body { font-family: 'Nunito', sans-serif; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'Playfair Display', serif; font-weight: 400; letter-spacing: 0.04em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'IBM Plex Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; }
+      .card-art, .genre-card, .playlist-header-art, #fp-art,
+      #np-art, #mini-art, #modal, #ctx-menu, #speaker-sheet { border-radius: 10px !important; }
+      #fp-art { box-shadow: 0 16px 48px rgba(60,50,70,0.35) !important; }
+      .logo { background: #7b5ea7 !important; }
+      #mobile-topbar, #fp-header { background: #7b5ea7 !important; }
+      #fp-art.playing { transform: scale(1.04) !important; }
+      #fp-art.paused  { transform: scale(0.92) !important; }
+    `,
+    artColors: ['#7b5ea7','#4a7a52','#f0ede4','#3a3842','#e6e2d6','#faf8f2','#a07cc8'],
+    artWeights: [1.5,1.5,2,1,2,2,0.8],
+  },
+
+  vinyl: {
+    name: 'Vinyl',
+    desc: 'Warm record store',
+    preview: ['#140d04','#231a0a','#d4820a','#4a3520','#f0e0c0'],
+    vars: {
+      '--bg':'#140d04','--surface':'#1e1508','--surface2':'#2a1e0e',
+      '--surface3':'#382a14','--border':'#5a4030','--bw':'1px',
+      '--accent':'#d4820a','--accent2':'#e8a030','--accent-dim':'#8a5008',
+      '--blue':'#8a3a18','--text':'#f0e0c0','--text2':'#c0a070',
+      '--text3':'#806040','--red':'#d04020',
+    },
+    css: `
+      body { font-family: 'Josefin Sans', sans-serif; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'Playfair Display', serif; font-style: italic; letter-spacing: 0.06em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'DM Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; }
+      .card-art, #fp-art, #np-art, #mini-art { border-radius: 50% !important; }
+      #fp-art { box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 0 0 4px rgba(90,60,20,0.4) !important; }
+      .logo, #mobile-topbar, #fp-header { background: #231a0a !important; }
+      #mini-play-btn { background: #d4820a !important; }
+    `,
+    artColors: ['#d4820a','#8a3a18','#2a1e0e','#1e1508','#f0e0c0','#c0a070','#382a14'],
+    artWeights: [2,1.5,2,2,1,1,0.5],
+  },
+
+  blueprint: {
+    name: 'Blueprint',
+    desc: 'Technical drawing',
+    preview: ['#071322','#0e1e38','#4a9fd4','#1e3a6e','#c8dcf0'],
+    vars: {
+      '--bg':'#071322','--surface':'#0e1e38','--surface2':'#162a50',
+      '--surface3':'#1e3a6e','--border':'#2a5090','--bw':'1px',
+      '--accent':'#4a9fd4','--accent2':'#6abcf0','--accent-dim':'#2a6a98',
+      '--blue':'#2a6ab0','--text':'#c8dcf0','--text2':'#7090b8',
+      '--text3':'#3a5880','--red':'#e05050',
+    },
+    css: `
+      body, .nav-item, .track-title, .card-label { font-family: 'Space Mono', monospace; font-size: 12px; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title, #fp-context { font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.08em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num { font-family: 'Space Mono', monospace; }
+      #play-btn { border-radius: 0 !important; transform: rotate(45deg) !important; }
+      #play-btn svg { transform: rotate(-45deg) !important; }
+      #fp-play-btn { border-radius: 0 !important; transform: rotate(45deg) !important; }
+      #fp-play-btn svg { transform: rotate(-45deg) !important; }
+      .logo, #mobile-topbar, #fp-header { background: #0e1e38 !important; border-bottom: 1px solid #2a5090 !important; }
+      #mini-play-btn { border-radius: 0 !important; }
+      #fp-art { border: 1px dashed #4a9fd4 !important; border-radius: 0 !important; box-shadow: none !important; }
+    `,
+    artColors: ['#4a9fd4','#2a6ab0','#0e1e38','#162a50','#c8dcf0','#c8dcf0','#1e3a6e'],
+    artWeights: [2,1.5,2,2,1,1,0.3],
+  },
+
+  neon: {
+    name: 'Tokyo Neon',
+    desc: 'Cyberpunk night',
+    preview: ['#060810','#0d0d1a','#ff2070','#00e8f8','#f0e8ff'],
+    vars: {
+      '--bg':'#060810','--surface':'#0d0d1a','--surface2':'#141428',
+      '--surface3':'#1c1c38','--border':'#2a2a50','--bw':'1px',
+      '--accent':'#ff2070','--accent2':'#ff6fa8','--accent-dim':'#c01050',
+      '--blue':'#00e8f8','--text':'#f0e8ff','--text2':'#a888cc',
+      '--text3':'#503870','--red':'#ff2070',
+    },
+    css: `
+      body { font-family: 'Rajdhani', 'Josefin Sans', sans-serif; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title, #fp-context { font-family: 'Orbitron', sans-serif; font-weight: 700; letter-spacing: 0.1em; font-size: 0.85em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'Orbitron', sans-serif; font-size: 0.8em; }
+      #play-btn, #fp-play-btn { border-radius: 50% !important; background: linear-gradient(135deg, #ff2070, #c01050) !important; box-shadow: 0 0 20px rgba(255,32,112,0.6) !important; }
+      #mini-play-btn { background: #ff2070 !important; }
+      .logo, #mobile-topbar, #fp-header { background: #0d0d1a !important; }
+      .nav-item.active { border-left-color: #ff2070 !important; color: #ff2070 !important; }
+      .bnav-item.active { border-top-color: #ff2070 !important; }
+      .track-row.playing .track-title { color: #ff2070 !important; }
+      .bar { background: #ff2070 !important; }
+      #progress-fill, #mini-progress-fill, #fp-progress-fill, #vol-fill, #fp-vol-fill { background: #ff2070 !important; }
+      #fp-art { box-shadow: 0 0 40px rgba(255,32,112,0.3), 0 0 80px rgba(0,232,248,0.1) !important; border-color: #ff2070 !important; }
+    `,
+    artColors: ['#ff2070','#00e8f8','#0d0d1a','#141428','#f0e8ff','#1c1c38','#a888cc'],
+    artWeights: [2,2,2,2,0.5,1,0.5],
+  },
+
+  arctic: {
+    name: 'Arctic',
+    desc: 'Ice & minimal',
+    preview: ['#f0f5f8','#ffffff','#2080c0','#cce0f0','#1a2a3a'],
+    vars: {
+      '--bg':'#f0f5f8','--surface':'#ffffff','--surface2':'#e4eef6',
+      '--surface3':'#ccdcea','--border':'#9ab8d0','--bw':'1px',
+      '--accent':'#2080c0','--accent2':'#4aa8e0','--accent-dim':'#104a80',
+      '--blue':'#1060a0','--text':'#1a2a3a','--text2':'#4a6a8a',
+      '--text3':'#8aaac8','--red':'#c03040',
+    },
+    css: `
+      body { font-family: 'IBM Plex Sans', sans-serif; letter-spacing: -0.01em; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; letter-spacing: -0.02em; text-transform: none; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num { font-family: 'Space Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; }
+      .card-art, .genre-card, .playlist-header-art,
+      #fp-art, #np-art, #mini-art, #modal { border-radius: 12px !important; }
+      #fp-art { box-shadow: 0 20px 60px rgba(0,60,120,0.15) !important; }
+      .logo { background: #2080c0 !important; }
+      #mobile-topbar, #fp-header { background: #2080c0 !important; }
+      .genre-card { border: 1px solid #ccdcea !important; }
+    `,
+    artColors: ['#2080c0','#4aa8e0','#f0f5f8','#cce0f0','#ffffff','#e4eef6','#1a2a3a'],
+    artWeights: [2,1.5,2,1.5,2,2,0.3],
+  },
+
+  terracotta: {
+    name: 'Terracotta',
+    desc: 'Sun-baked clay',
+    preview: ['#faf0e8','#fff8f0','#c85020','#d4a080','#2a1808'],
+    vars: {
+      '--bg':'#faf0e8','--surface':'#fff8f0','--surface2':'#eeddd0',
+      '--surface3':'#e0c8b8','--border':'#a06040','--bw':'2px',
+      '--accent':'#c85020','--accent2':'#e07050','--accent-dim':'#803010',
+      '--blue':'#5a7840','--text':'#2a1808','--text2':'#7a4828',
+      '--text3':'#b08060','--red':'#c03020',
+    },
+    css: `
+      body { font-family: 'Nunito', sans-serif; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'Playfair Display', serif; font-weight: 400; letter-spacing: 0.03em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'IBM Plex Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; }
+      .card-art, .genre-card, .playlist-header-art,
+      #fp-art, #np-art, #mini-art { border-radius: 8px !important; }
+      #fp-art { box-shadow: 0 16px 48px rgba(80,30,10,0.25) !important; }
+      .logo, #mobile-topbar, #fp-header { background: #c85020 !important; }
+      #mini-play-btn { background: #c85020 !important; }
+    `,
+    artColors: ['#c85020','#5a7840','#faf0e8','#eeddd0','#fff8f0','#e0c8b8','#a06040'],
+    artWeights: [2,1.5,2,2,1,1,0.5],
+  },
+
+  forest: {
+    name: 'Forest',
+    desc: 'Deep woodland',
+    preview: ['#060e08','#0f1a0f','#3ec858','#1e3a1e','#c8f0d0'],
+    vars: {
+      '--bg':'#060e08','--surface':'#0f1a0f','--surface2':'#162216',
+      '--surface3':'#1e3a1e','--border':'#2a5028','--bw':'1px',
+      '--accent':'#3ec858','--accent2':'#68e888','--accent-dim':'#207830',
+      '--blue':'#2a8a4a','--text':'#c8f0d0','--text2':'#70a878',
+      '--text3':'#305838','--red':'#e05040',
+    },
+    css: `
+      body { font-family: 'Josefin Sans', sans-serif; letter-spacing: 0.02em; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'Josefin Sans', sans-serif; font-weight: 700; letter-spacing: 0.14em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'IBM Plex Mono', monospace; }
+      #play-btn, #fp-play-btn { border-radius: 50% !important; background: #3ec858 !important; }
+      #mini-play-btn { border-radius: 50% !important; background: #3ec858 !important; }
+      .logo, #mobile-topbar, #fp-header { background: #0f1a0f !important; border-bottom-color: #2a5028 !important; }
+      .logo-word, .mob-logo { color: #3ec858 !important; }
+      #fp-art { box-shadow: 0 20px 60px rgba(0,30,10,0.8) !important; }
+      .bar { background: #3ec858 !important; }
+      .nav-item.active { color: #3ec858 !important; border-left-color: #3ec858 !important; }
+    `,
+    artColors: ['#3ec858','#2a8a4a','#0f1a0f','#162216','#c8f0d0','#1e3a1e','#68e888'],
+    artWeights: [2,1.5,2,2,0.8,1,0.5],
+  },
+
+  rosegold: {
+    name: 'Rose Gold',
+    desc: 'Blush luxury',
+    preview: ['#fdf5f2','#ffffff','#c06878','#b87848','#2a1820'],
+    vars: {
+      '--bg':'#fdf5f2','--surface':'#ffffff','--surface2':'#f2e8e4',
+      '--surface3':'#e8d8d2','--border':'#c0a098','--bw':'1px',
+      '--accent':'#c06878','--accent2':'#d888a0','--accent-dim':'#904858',
+      '--blue':'#b87848','--text':'#2a1820','--text2':'#806070',
+      '--text3':'#c0a8a0','--red':'#c04060',
+    },
+    css: `
+      body { font-family: 'Raleway', sans-serif; font-weight: 400; }
+      .logo-word, .section-title, .playlist-meta-name, .mob-logo,
+      #settings-title { font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: 0.14em; }
+      .time-label, .track-dur, .nav-label, .fp-ctrl-label,
+      .track-num, #loading-text { font-family: 'IBM Plex Mono', monospace; }
+      #play-btn, #fp-play-btn, #mini-play-btn { border-radius: 50% !important; background: linear-gradient(135deg, #c06878, #b87848) !important; box-shadow: 0 4px 16px rgba(192,104,120,0.4) !important; }
+      .card-art, .genre-card, .playlist-header-art,
+      #fp-art, #np-art, #mini-art { border-radius: 12px !important; }
+      .logo { background: linear-gradient(135deg, #c06878, #b87848) !important; }
+      #mobile-topbar, #fp-header { background: linear-gradient(135deg, #c06878, #b87848) !important; }
+      #fp-art { box-shadow: 0 20px 60px rgba(100,40,60,0.2) !important; }
+      #mini-play-btn { background: linear-gradient(135deg, #c06878, #b87848) !important; }
+    `,
+    artColors: ['#c06878','#b87848','#fdf5f2','#f2e8e4','#ffffff','#e8d8d2','#c0a098'],
+    artWeights: [2,1.5,2,2,1,1,0.5],
+  },
+
+};
+
+// ── Skin engine ──────────────────────────────────────────────────────────────
+
+let currentSkinId = localStorage.getItem('sonata_skin') || 'destijl';
+
+function applySkin(id) {
+  const skin = SKINS[id] || SKINS.destijl;
+
+  // 1. Apply CSS custom property overrides
+  const root = document.documentElement;
+
+  // Reset to De Stijl defaults first
+  const defaults = SKINS.destijl.vars;
+  Object.entries(defaults).forEach(([k,v]) => root.style.setProperty(k, v));
+
+  // Apply skin vars
+  Object.entries(skin.vars || {}).forEach(([k,v]) => root.style.setProperty(k, v));
+
+  // 2. Inject (or clear) structural CSS overrides
+  let styleEl = document.getElementById('skin-css-overrides');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'skin-css-overrides';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = skin.css || '';
+
+  // 3. Update art generator palette
+  window._currentSkinArtColors  = skin.artColors  || SKINS.destijl.artColors;
+  window._currentSkinArtWeights = skin.artWeights || SKINS.destijl.artWeights;
+
+  // 4. Refresh all existing art canvases with new palette
+  document.querySelectorAll('.art-canvas').forEach(canvas => {
+    drawArt(canvas, canvas.dataset.seed || '', parseInt(canvas.dataset.size) || 160);
+  });
+  if (state.currentTrack) {
+    applyArtToCanvas(document.getElementById('np-canvas'),   state.currentTrack, 48);
+    applyArtToCanvas(document.getElementById('mini-canvas'), state.currentTrack, 42);
+    applyArtToCanvas(document.getElementById('fp-canvas'),   state.currentTrack, 320);
+  }
+
+  // 5. Persist
+  currentSkinId = id;
+  localStorage.setItem('sonata_skin', id);
+
+  // 6. Update skin grid active state if open
+  document.querySelectorAll('.skin-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.skin === id);
+  });
+}
+
+// Patch drawArt to use current skin palette
+const _origDrawArt = drawArt;
+window.drawArt = function(canvas, seed, size) {
+  // Temporarily override palette globals
+  const savedColors  = window.MONDRIAN_COLORS_OVERRIDE;
+  const savedWeights = window.MONDRIAN_WEIGHTS_OVERRIDE;
+
+  if (window._currentSkinArtColors) {
+    window._drawArtColors  = window._currentSkinArtColors;
+    window._drawArtWeights = window._currentSkinArtWeights;
+  }
+  _origDrawArt(canvas, seed, size);
+};
+
+// Also patch pickColor to use window overrides
+// (drawArt is self-contained, so we patch its internals via a redefinition)
+function drawArt(canvas, seed, size) {
+  const colors  = window._currentSkinArtColors  || MONDRIAN_COLORS;
+  const weights = window._currentSkinArtWeights || MONDRIAN_WEIGHTS;
+
+  const h = hashStr(seed || 'x');
+  const rng = seededRng(h);
+  const ctx = canvas.getContext('2d');
+  canvas.width = size; canvas.height = size;
+  const LINE = Math.max(2, Math.round(size * 0.04));
+
+  function localPickColor() {
+    const total = weights.reduce((a,b)=>a+b, 0);
+    let r = rng() * total;
+    for (let i = 0; i < colors.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return colors[i];
+    }
+    return colors[0];
+  }
+
+  function genDivs(n) {
+    const pts = [0];
+    for (let i = 0; i < n; i++) pts.push(Math.round((0.15 + rng() * 0.7 + i * 0.05) * size));
+    pts.push(size);
+    return [...new Set(pts)].sort((a,b)=>a-b);
+  }
+
+  const cols = genDivs(1 + Math.floor(rng() * 2));
+  const rows = genDivs(1 + Math.floor(rng() * 2));
+
+  for (let r = 0; r < rows.length - 1; r++) {
+    for (let c = 0; c < cols.length - 1; c++) {
+      const x  = cols[c] + LINE;
+      const y  = rows[r] + LINE;
+      const w  = cols[c+1] - cols[c] - LINE;
+      const hh = rows[r+1] - rows[r] - LINE;
+      ctx.fillStyle = localPickColor();
+      ctx.fillRect(x, y, w, hh);
+    }
+  }
+
+  ctx.fillStyle = '#0d0d0d';
+  for (const x of cols) ctx.fillRect(x, 0, LINE, size);
+  for (const y of rows) ctx.fillRect(0, y, size, LINE);
+}
+
+// ── Settings screen ──────────────────────────────────────────────────────────
+
+function openSettings() {
+  renderSkinGrid();
+  const el = document.getElementById('settings-overlay');
+  el.style.display = 'flex';
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+
+function closeSettings() {
+  const el = document.getElementById('settings-overlay');
+  el.classList.remove('open');
+  setTimeout(() => { el.style.display = 'none'; }, 380);
+}
+
+function renderSkinGrid() {
+  const grid = document.getElementById('skin-grid');
+  grid.innerHTML = Object.entries(SKINS).map(([id, skin]) => {
+    const isActive = id === currentSkinId;
+    const swatches = skin.preview.map(c =>
+      `<div class="skin-preview-col" style="background:${c}"></div>`
+    ).join('');
+    return `
+    <div class="skin-card${isActive ? ' active' : ''}" data-skin="${id}">
+      <div class="skin-card-active-bar"></div>
+      <div class="skin-preview">${swatches}</div>
+      <div class="skin-card-name">${skin.name}</div>
+      <div class="skin-card-desc">${skin.desc}</div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.skin-card').forEach(card => {
+    card.onclick = () => {
+      applySkin(card.dataset.skin);
+      showToast(`${SKINS[card.dataset.skin].name} applied`);
+    };
+  });
+}
+
+// Wire up open/close buttons
+document.getElementById('settings-close-btn').onclick = closeSettings;
+document.getElementById('mob-settings-btn').onclick   = openSettings;
+document.getElementById('desktop-settings-btn').onclick = openSettings;
+
+// Swipe down to close
+document.getElementById('settings-overlay').addEventListener('touchstart', e => {
+  window._settingsTouchY = e.touches[0].clientY;
+}, { passive: true });
+document.getElementById('settings-overlay').addEventListener('touchend', e => {
+  if (e.changedTouches[0].clientY - (window._settingsTouchY||0) > 80) closeSettings();
+}, { passive: true });
+
+// Apply saved skin on load
+applySkin(currentSkinId);
+
+// Auto-connect to NAS silently on startup if addresses are saved
+if (nas.tailscaleIP || nas.quickconnectURL) {
+  resolveNasURL().then(ok => {
+    if (ok) {
+      lastResolveTime = Date.now();
+      discoverSonosRooms();
+    }
+  });
+}
+
+// When a new track starts while Sonos is active, hand it to the active room
+audio.addEventListener('sonata-play-new', () => {
+  if (speaker.activeRoom && state.currentTrack) {
+    playSonos(speaker.activeRoom);
+  }
+});
+
+// ══════════════════════════════════════════════
+//  ARTIST PHOTOGRAPHY (fanart.tv + MusicBrainz)
+// ══════════════════════════════════════════════
+
+const artistArt = {
+  apiKey:    localStorage.getItem('sonata_fanart_key') || '',
+  // Cache: artistName → { mbid, imageUrl, fetched } stored in localStorage
+  // null imageUrl = confirmed no image available
+  // undefined = not yet fetched
+};
+
+const FANART_CACHE_KEY = 'sonata_artist_photos';
+const MBID_CACHE_KEY   = 'sonata_artist_mbids';
+
+function loadArtistCache() {
+  try { return JSON.parse(localStorage.getItem(FANART_CACHE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveArtistCache(cache) {
+  try { localStorage.setItem(FANART_CACHE_KEY, JSON.stringify(cache)); }
+  catch(e) { /* localStorage full — trim oldest */ }
+}
+function loadMbidCache() {
+  try { return JSON.parse(localStorage.getItem(MBID_CACHE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveMbidCache(cache) {
+  try { localStorage.setItem(MBID_CACHE_KEY, JSON.stringify(cache)); }
+  catch(e) {}
+}
+
+// Fetch MBID from MusicBrainz (rate-limited to 1 req/sec by MB)
+// Returns mbid string or null
+const mbidQueue = [];
+let mbidFetching = false;
+
+async function getMBID(artistName) {
+  const cache = loadMbidCache();
+  if (cache[artistName] !== undefined) return cache[artistName];
+
+  return new Promise(resolve => {
+    mbidQueue.push({ artistName, resolve });
+    processMBIDQueue();
+  });
+}
+
+async function processMBIDQueue() {
+  if (mbidFetching || !mbidQueue.length) return;
+  mbidFetching = true;
+
+  const { artistName, resolve } = mbidQueue.shift();
+  const cache = loadMbidCache();
+
+  if (cache[artistName] !== undefined) {
+    resolve(cache[artistName]);
+    mbidFetching = false;
+    setTimeout(processMBIDQueue, 0);
+    return;
+  }
+
+  try {
+    const q   = encodeURIComponent(`artist:"${artistName}"`);
+    const url = `https://musicbrainz.org/ws/2/artist/?query=${q}&limit=1&fmt=json`;
+    const r   = await fetch(url, { headers: { 'User-Agent': 'Sonata/1.0 (personal music player)' } });
+    if (r.ok) {
+      const data = await r.json();
+      const mbid = data.artists?.[0]?.id || null;
+      cache[artistName] = mbid;
+      saveMbidCache(cache);
+      resolve(mbid);
+    } else {
+      resolve(null);
+    }
+  } catch(e) {
+    resolve(null);
+  }
+
+  mbidFetching = false;
+  // MusicBrainz rate limit: 1 request per second without a key
+  setTimeout(processMBIDQueue, 1100);
+}
+
+// Fetch artist thumbnail from fanart.tv using MBID
+async function getFanartImage(mbid) {
+  if (!artistArt.apiKey || !mbid) return null;
+  try {
+    const url = `https://webservice.fanart.tv/v3/music/${mbid}?api_key=${artistArt.apiKey}`;
+    const r   = await fetch(url);
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Prefer artistthumb, fall back to artistbackground
+    const thumbs = data.artistthumb || data.artistbackground || [];
+    if (!thumbs.length) return null;
+    // Pick highest liked
+    const best = thumbs.sort((a,b) => parseInt(b.likes||0) - parseInt(a.likes||0))[0];
+    return best?.url || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// Main entry point: get image URL for an artist, using cache
+// Returns: URL string, null (confirmed none), or undefined (not yet fetched)
+async function getArtistImageUrl(artistName) {
+  if (!artistArt.apiKey) return null;
+  const cache = loadArtistCache();
+  if (cache[artistName] !== undefined) return cache[artistName]; // null or URL
+
+  // Fetch in background — return undefined immediately so card shows Mondrian first
+  fetchAndCacheArtistImage(artistName);
+  return undefined;
+}
+
+async function fetchAndCacheArtistImage(artistName) {
+  const cache = loadArtistCache();
+  if (cache[artistName] !== undefined) return; // already fetched
+
+  const mbid    = await getMBID(artistName);
+  const imgUrl  = mbid ? await getFanartImage(mbid) : null;
+
+  cache[artistName] = imgUrl; // null means confirmed no image
+  saveArtistCache(cache);
+
+  // If the artist view is currently showing, update the card
+  if (state.currentView === 'artists' && !state.drillTarget) {
+    const card = document.querySelector(`.grid-card[data-artist="${CSS.escape(artistName)}"]`);
+    if (card) injectArtistPhoto(card, artistName, imgUrl);
+  }
+}
+
+// Inject a photo into an artist card (or leave Mondrian if no image)
+function injectArtistPhoto(cardEl, artistName, imageUrl) {
+  const artEl = cardEl.querySelector('.card-art');
+  if (!artEl) return;
+
+  // Remove any existing photo
+  artEl.querySelectorAll('.artist-photo, .artist-photo-loading').forEach(el => el.remove());
+
+  if (!imageUrl) return; // keep Mondrian
+
+  const img = document.createElement('img');
+  img.className = 'artist-photo';
+  img.alt = artistName;
+  img.onload  = () => img.classList.add('loaded');
+  img.onerror = () => img.remove();
+  img.src = imageUrl;
+  artEl.appendChild(img);
+}
+
+// Settings UI wiring
+function updateFanartStatus() {
+  const el = document.getElementById('fanart-status');
+  if (!el) return;
+  const cache   = loadArtistCache();
+  const fetched = Object.keys(cache).length;
+  const withImg = Object.values(cache).filter(Boolean).length;
+  if (!artistArt.apiKey) {
+    el.textContent = 'Not configured';
+    el.style.color = 'var(--text3)';
+  } else {
+    el.textContent  = fetched
+      ? `${withImg} artist photo${withImg !== 1 ? 's' : ''} cached (${fetched} artists checked)`
+      : 'Key saved — photos will load as you browse';
+    el.style.color = 'var(--blue)';
+  }
+}
+
+document.getElementById('fanart-save-btn').onclick = () => {
+  const key = document.getElementById('fanart-api-key-input').value.trim();
+  if (!key) return;
+  artistArt.apiKey = key;
+  localStorage.setItem('sonata_fanart_key', key);
+  updateFanartStatus();
+  showToast('API key saved — artist photos will load as you browse');
+};
+
+document.getElementById('fanart-clear-cache-btn').onclick = () => {
+  localStorage.removeItem(FANART_CACHE_KEY);
+  localStorage.removeItem(MBID_CACHE_KEY);
+  updateFanartStatus();
+  showToast('Artist image cache cleared');
+};
+
+// Pre-populate fanart API key input if already saved
+if (artistArt.apiKey) {
+  const inp = document.getElementById('fanart-api-key-input');
+  if (inp) inp.value = artistArt.apiKey;
+  updateFanartStatus();
+}
+
+// Pre-populate Jellyfin inputs if already saved
+(function initJellyfinUI() {
+  const urlEl = document.getElementById('jf-url-input');
+  const keyEl = document.getElementById('jf-key-input');
+  if (urlEl && jellyfin.serverUrl) urlEl.value = jellyfin.serverUrl;
+  if (keyEl && jellyfin.apiKey)    keyEl.value = jellyfin.apiKey;
+  if (jellyfin.connected) updateJfStatus(`Connected · ${state.tracks.length.toLocaleString()} tracks`);
+})();
+
+document.getElementById('jf-connect-btn').onclick = async () => {
+  const urlEl = document.getElementById('jf-url-input');
+  const keyEl = document.getElementById('jf-key-input');
+  const url   = (urlEl.value || '').trim().replace(/\/$/, '');
+  const key   = (keyEl.value || '').trim();
+  if (!url || !key) { showToast('Enter server URL and API key'); return; }
+  jellyfin.serverUrl = url;
+  jellyfin.apiKey    = key;
+  jellyfin.userId    = ''; // reset so it re-resolves
+  localStorage.setItem('sonata_jf_url',    url);
+  localStorage.setItem('sonata_jf_key',    key);
+  localStorage.removeItem('sonata_jf_userid');
+  updateJfStatus('Connecting…');
+  closeSettings();
+  await fetchLibrary();
+  // Re-open settings to show result
+  // (user closed it — leave closed, toast will inform them)
+};
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+(async () => {
+  await loadSavedTracks();   // Load any OPFS-saved offline tracks first
+  renderPlaylists();
+  renderView();
+  // Then fetch from Jellyfin if configured
+  if (jellyfin.serverUrl && jellyfin.apiKey) {
+    await fetchLibrary();
+  }
+})();
+</script>
+</body>
+</html>
