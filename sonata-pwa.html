@@ -1409,7 +1409,46 @@ body {
   .track-row { grid-template-columns: 40px 1fr 44px 44px !important; }
 }
 
-/* ── Speaker / Cast ── */
+/* ── Search section labels ── */
+.search-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 20px 20px 10px;
+  border-bottom: 1px solid var(--surface3);
+  border-top: var(--bw) solid var(--border);
+  margin-top: 8px;
+}
+
+/* ── Artist albums hero header ── */
+.artist-albums-header {
+  padding: 20px 20px 16px !important;
+  border-bottom: var(--bw) solid var(--border);
+}
+.artist-albums-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.artist-albums-photo {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.artist-albums-photo canvas,
+.artist-albums-photo img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+}
+.artist-albums-photo img { transition: opacity 0.3s; }
 #speaker-modal {
   position: fixed;
   inset: 0;
@@ -2320,7 +2359,7 @@ async function fetchLibrary() {
 
     document.getElementById('loading-text').textContent = 'Loading library…';
 
-    const fields = 'AlbumArtist,Artists,Genres,ParentId,IndexNumber,RunTimeTicks,AlbumId,AlbumArtistIds';
+    const fields = 'AlbumArtist,Artists,Genres,ParentId,IndexNumber,RunTimeTicks,AlbumId,AlbumArtistIds,ProductionYear';
     const data = await jfGet(
       `/Users/${jellyfin.userId}/Items?IncludeItemTypes=Audio&Recursive=true` +
       `&Fields=${fields}&SortBy=AlbumArtist,Album,IndexNumber,SortName` +
@@ -2353,6 +2392,7 @@ async function fetchLibrary() {
         genre:        (item.Genres && item.Genres[0]) || '',
         trackNumber:  item.IndexNumber || 0,
         duration:     Math.round((item.RunTimeTicks || 0) / 10000000),
+        year:         item.ProductionYear || 0,
         artSeed:      item.Album || albumArtist || artist || item.Name,
         artUrl,
         streamUrl,
@@ -3099,50 +3139,44 @@ function renderView() {
   }
 
   const v = state.currentView;
-  if (v === 'all' || v === 'search') { renderTrackList(getVisibleTracks()); return; }
-  if (v === 'artists')      { renderArtistView();       return; }
-  if (v === 'albums')       { renderAlbumView();        return; }
-  if (v === 'genres')       { renderGenreView();        return; }
-  if (v === 'compilations') { renderCompilationsView(); return; }
-  if (v === 'djmixes')      { renderDJMixesView();      return; }
-  if (v === 'playlist')     { renderPlaylistView();     return; }
+  if (v === 'all')          { renderTrackList(getVisibleTracks()); return; }
+  if (v === 'search')       { renderSearchView();           return; }
+  if (v === 'artists')      { renderArtistView();           return; }
+  if (v === 'albums')       { renderAlbumView();            return; }
+  if (v === 'genres')       { renderGenreView();            return; }
+  if (v === 'compilations') { renderCompilationsView();     return; }
+  if (v === 'djmixes')      { renderDJMixesView();          return; }
+  if (v === 'playlist')     { renderPlaylistView();         return; }
   if (v === 'playlists-mobile') { renderMobilePlaylistsList(); return; }
-  if (v === 'saved')        { renderSavedView();        return; }
-  if (v === 'mixes-mobile') { renderMixesMobile();      return; }
+  if (v === 'saved')        { renderSavedView();            return; }
+  if (v === 'mixes-mobile') { renderMixesMobile();          return; }
 }
 
 function getVisibleTracks() {
   if (state.drillTarget) {
-    const { type, value } = state.drillTarget;
+    const { type, value, artist } = state.drillTarget;
     let tracks = [];
-    if (type === 'artist')      tracks = state.tracks.filter(t => t.albumArtist === value);
-    else if (type === 'album')  tracks = state.tracks.filter(t => t.album === value);
-    else if (type === 'genre')  tracks = state.tracks.filter(t => t.genre === value);
+    if (type === 'artist-album') tracks = state.tracks.filter(t => t.album === value && (t.albumArtist === artist || t.artist === artist));
+    else if (type === 'album')   tracks = state.tracks.filter(t => t.album === value);
+    else if (type === 'genre')   tracks = state.tracks.filter(t => t.genre === value);
     else if (type === 'compilation' || type === 'djmix') tracks = state.tracks.filter(t => t.album === value);
-    // Sort by track number for album/compilation/djmix drilldowns
-    if (type !== 'artist' && type !== 'genre') {
+    if (type !== 'genre') {
       tracks = [...tracks].sort((a,b) => (a.trackNumber || 0) - (b.trackNumber || 0));
     }
     return tracks;
   }
-  if (state.searchQ) {
-    return state.tracks.filter(t =>
-      t.title.toLowerCase().includes(state.searchQ) ||
-      t.artist.toLowerCase().includes(state.searchQ) ||
-      t.album.toLowerCase().includes(state.searchQ)
-    );
-  }
   return state.tracks;
 }
 
-function renderTrackList(tracks) {
+function renderTrackList(tracks, backFn, backLabel) {
   const content = document.getElementById('content');
   let title = 'All Tracks';
   if (state.drillTarget) title = state.drillTarget.value;
   else if (state.searchQ) title = `"${state.searchQ}"`;
 
-  const mob = isMobile();
+  const mob    = isMobile();
   const isDrill = !!state.drillTarget;
+  const hasBack = isDrill || !!backFn;
 
   const rows = tracks.map((t, i) => {
     const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
@@ -3170,7 +3204,6 @@ function renderTrackList(tracks) {
     </div>`;
   }).join('');
 
-  // Save-all button for drill-down views on mobile
   const allSaved = isDrill && mob && tracks.length > 0 && tracks.every(t => state.savedIds.has(t.id));
   const saveAllBtn = (isDrill && mob) ? `
     <button class="save-collection-btn${allSaved ? ' all-saved' : ''}" id="save-all-btn">
@@ -3178,10 +3211,10 @@ function renderTrackList(tracks) {
       ${allSaved ? 'All Saved' : 'Save All'}
     </button>` : '';
 
-  const backBtn = isDrill ? `
+  const backBtn = hasBack ? `
     <button class="back-btn" id="back-btn">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      Back
+      ${backLabel || 'Back'}
     </button>` : '';
 
   content.innerHTML = `
@@ -3197,7 +3230,9 @@ function renderTrackList(tracks) {
     <div id="track-list">${rows}</div>`;
 
   if (document.getElementById('back-btn')) {
-    document.getElementById('back-btn').onclick = () => { state.drillTarget = null; renderView(); };
+    document.getElementById('back-btn').onclick = backFn
+      ? backFn
+      : () => { state.drillTarget = null; renderView(); };
   }
   if (document.getElementById('save-all-btn')) {
     document.getElementById('save-all-btn').onclick = () => saveCollectionToDevice(tracks, title);
@@ -3266,31 +3301,47 @@ function getAlbumTracks(albumName) {
   return state.tracks.filter(t => t.album === albumName);
 }
 
-// ── Artists view (uses albumArtist, filters junk) ─────────────────────────────
+// ── Artists view ──────────────────────────────────────────────────────────────
 
 function renderArtistView() {
-  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
   const content = document.getElementById('content');
 
-  // Build map keyed by albumArtist
+  // Level 3: artist-album → track list
+  if (state.drillTarget && state.drillTarget.type === 'artist-album') {
+    const tracks = getVisibleTracks();
+    const artistName = state.drillTarget.artist;
+    // Temporarily set drillTarget for renderTrackList back button
+    const savedDrill = state.drillTarget;
+    renderTrackList(tracks, () => {
+      state.drillTarget = { type: 'artist', value: artistName };
+      renderView();
+    }, `Back to ${artistName}`);
+    return;
+  }
+
+  // Level 2: artist → album tiles
+  if (state.drillTarget && state.drillTarget.type === 'artist') {
+    renderArtistAlbums(state.drillTarget.value);
+    return;
+  }
+
+  // Level 1: all artists grid
   const map = {};
   for (const t of state.tracks) {
     const aa = t.albumArtist || t.artist;
     if (isVAName(aa)) continue;
-    if (!map[aa]) map[aa] = { count: 0, seed: t.artSeed };
+    if (!map[aa]) map[aa] = { count: 0, albumCount: 0, seed: t.artSeed, albums: new Set() };
     map[aa].count++;
+    map[aa].albums.add(t.album);
   }
+  for (const v of Object.values(map)) v.albumCount = v.albums.size;
 
-  // Filter out single-track artists
   const filtered = Object.entries(map).filter(([,v]) => v.count > 1);
-
   const photoCache = loadArtistCache();
 
   const cards = filtered.sort((a,b) => a[0].localeCompare(b[0])).map(([name, info]) => {
-    const cachedImg = photoCache[name]; // URL, null, or undefined
-    const photoEl = cachedImg
-      ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">`
-      : '';
+    const cachedImg = photoCache[name];
+    const photoEl  = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">` : '';
     return `
     <div class="grid-card" data-artist="${esc(name)}">
       <div class="card-art">
@@ -3298,7 +3349,7 @@ function renderArtistView() {
         ${photoEl}
       </div>
       <div class="card-label">${esc(name)}</div>
-      <div class="card-sublabel">${info.count} track${info.count !== 1 ? 's' : ''}</div>
+      <div class="card-sublabel">${info.albumCount} album${info.albumCount !== 1 ? 's' : ''}</div>
     </div>`;
   }).join('');
 
@@ -3308,18 +3359,214 @@ function renderArtistView() {
 
   initArtCanvases();
 
-  // Kick off background fetches for any uncached artists
   if (artistArt.apiKey) {
     filtered.forEach(([name]) => {
-      if (photoCache[name] === undefined) {
-        // Not yet fetched — fetch in background and update card when done
-        fetchAndCacheArtistImage(name);
-      }
+      if (photoCache[name] === undefined) fetchAndCacheArtistImage(name);
     });
   }
 
   content.querySelectorAll('.grid-card').forEach(card => {
-    card.onclick = () => { state.drillTarget = { type: 'artist', value: card.dataset.artist }; renderView(); };
+    card.onclick = () => {
+      state.drillTarget = { type: 'artist', value: card.dataset.artist };
+      renderView();
+    };
+  });
+}
+
+// ── Artist albums view (level 2) ──────────────────────────────────────────────
+
+function renderArtistAlbums(artistName) {
+  const content = document.getElementById('content');
+
+  // Gather all albums by this artist
+  const albumMap = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (aa !== artistName) continue;
+    if (!albumMap[t.album]) {
+      albumMap[t.album] = {
+        album:   t.album,
+        year:    t.year || 0,
+        seed:    t.artSeed,
+        artUrl:  t.artUrl || null,
+        count:   0,
+      };
+    }
+    albumMap[t.album].count++;
+    // Keep earliest year if track has one
+    if (t.year && (!albumMap[t.album].year || t.year < albumMap[t.album].year)) {
+      albumMap[t.album].year = t.year;
+    }
+  }
+
+  const albums = Object.values(albumMap).sort((a,b) => {
+    if (a.year && b.year) return a.year - b.year;
+    return a.album.localeCompare(b.album);
+  });
+
+  const photoCache = loadArtistCache();
+  const cachedImg  = photoCache[artistName];
+  const photoEl    = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(artistName)}">` : '';
+
+  const cards = albums.map(info => `
+    <div class="grid-card" data-album="${esc(info.album)}" data-artist="${esc(artistName)}">
+      <div class="card-art">
+        <canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas>
+      </div>
+      <div class="card-label">${esc(info.album)}</div>
+      <div class="card-sublabel">${info.year ? info.year : ''}</div>
+    </div>`).join('');
+
+  content.innerHTML = `
+    <button class="back-btn" id="back-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Artists
+    </button>
+    <div class="section-header artist-albums-header">
+      <div class="artist-albums-hero">
+        <div class="artist-albums-photo">
+          <canvas class="art-canvas" data-seed="${esc(artistName)}" data-size="80"></canvas>
+          ${photoEl}
+        </div>
+        <div>
+          <span class="section-title">${esc(artistName)}</span>
+          <div class="section-count" style="margin-top:4px">${albums.length} album${albums.length !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No albums found</div>'}</div>`;
+
+  initArtCanvases();
+
+  document.getElementById('back-btn').onclick = () => {
+    state.drillTarget = null;
+    renderView();
+  };
+
+  content.querySelectorAll('.grid-card').forEach(card => {
+    card.onclick = () => {
+      state.drillTarget = {
+        type:   'artist-album',
+        value:  card.dataset.album,
+        artist: card.dataset.artist,
+      };
+      renderView();
+    };
+  });
+}
+
+// ── Search view ───────────────────────────────────────────────────────────────
+
+function renderSearchView() {
+  if (!state.searchQ) { renderTrackList(state.tracks); return; }
+  const content = document.getElementById('content');
+  const q = state.searchQ.toLowerCase();
+
+  // Matching artists
+  const artistMap = {};
+  for (const t of state.tracks) {
+    const aa = t.albumArtist || t.artist;
+    if (isVAName(aa)) continue;
+    if (!artistMap[aa]) artistMap[aa] = { count: 0, albumCount: 0, seed: t.artSeed, albums: new Set() };
+    artistMap[aa].count++;
+    artistMap[aa].albums.add(t.album);
+  }
+  for (const v of Object.values(artistMap)) v.albumCount = v.albums.size;
+
+  const matchedArtists = Object.entries(artistMap)
+    .filter(([name]) => name.toLowerCase().includes(q))
+    .sort((a,b) => a[0].localeCompare(b[0]));
+
+  // Matching tracks (title or album, not already covered by artist match)
+  const matchedTracks = state.tracks.filter(t =>
+    t.title.toLowerCase().includes(q) || t.album.toLowerCase().includes(q)
+  );
+
+  const photoCache = loadArtistCache();
+
+  let html = `<div class="section-header"><span class="section-title">"${esc(state.searchQ)}"</span></div>`;
+
+  // Artist tiles section
+  if (matchedArtists.length) {
+    const cards = matchedArtists.map(([name, info]) => {
+      const cachedImg = photoCache[name];
+      const photoEl  = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">` : '';
+      return `
+      <div class="grid-card search-artist-card" data-artist="${esc(name)}">
+        <div class="card-art">
+          <canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas>
+          ${photoEl}
+        </div>
+        <div class="card-label">${esc(name)}</div>
+        <div class="card-sublabel">${info.albumCount} album${info.albumCount !== 1 ? 's' : ''}</div>
+      </div>`;
+    }).join('');
+    html += `
+      <div class="search-section-label">Artists</div>
+      <div class="grid-view" style="border-top:none">${cards}</div>`;
+  }
+
+  // Track results section
+  if (matchedTracks.length) {
+    html += `<div class="search-section-label" style="margin-top:0">Tracks &amp; Albums <span style="font-weight:400;opacity:0.6">(${matchedTracks.length})</span></div>`;
+    const rows = matchedTracks.map((t, i) => {
+      const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
+      const playing   = isPlaying && state.playing;
+      return `
+      <div class="track-row${isPlaying ? ' playing'+(playing?'':' paused-state') : ''}" data-id="${t.id}" data-idx="${i}">
+        <div class="track-num">
+          <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+          <span class="track-num-val">${i+1}</span>
+        </div>
+        <div class="track-info">
+          <div class="track-title">${esc(t.title)}</div>
+          <div class="track-artist-sm">${esc(t.artist)}</div>
+        </div>
+        ${isMobile() ? '' : `<div class="track-album-col">${esc(t.album)}</div>`}
+        ${isMobile() ? '' : `<div class="track-dur">${formatTime(t.duration)}</div>`}
+        <div class="track-actions">
+          <button class="add-to-btn" data-id="${t.id}" title="Add to playlist">+</button>
+        </div>
+      </div>`;
+    }).join('');
+    html += `${isMobile() ? '' : `<div class="track-list-header"><div>#</div><div>Title</div><div>Album</div><div style="text-align:right">Duration</div><div></div></div>`}
+      <div id="track-list">${rows}</div>`;
+  }
+
+  if (!matchedArtists.length && !matchedTracks.length) {
+    html += `<div style="padding:32px 24px;color:var(--text3);font-size:13px">No results for "${esc(state.searchQ)}"</div>`;
+  }
+
+  content.innerHTML = html;
+  initArtCanvases();
+
+  content.querySelectorAll('.search-artist-card').forEach(card => {
+    card.onclick = () => {
+      state.drillTarget = { type: 'artist', value: card.dataset.artist };
+      state.currentView = 'artists';
+      state.searchQ = '';
+      document.getElementById('search').value = '';
+      document.getElementById('mob-search').value = '';
+      renderView();
+    };
+  });
+
+  content.querySelectorAll('.track-row').forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.closest('.add-to-btn')) return;
+      const idx = parseInt(row.dataset.idx);
+      playTracksAt(matchedTracks, idx);
+      renderView();
+    };
+  });
+
+  content.querySelectorAll('.add-to-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      pendingAddTrackId = btn.dataset.id;
+      const r = btn.getBoundingClientRect();
+      showCtxMenu(r.left, r.bottom + 4, 'add-to-playlist');
+    };
   });
 }
 
@@ -3710,7 +3957,13 @@ function showMobilePlaylists() {
 
 function initArtCanvases() {
   document.querySelectorAll('.art-canvas').forEach(canvas => {
-    drawArt(canvas, canvas.dataset.seed || '', parseInt(canvas.dataset.size) || 160);
+    const size   = parseInt(canvas.dataset.size) || 160;
+    const artUrl = canvas.dataset.arturl || '';
+    if (artUrl) {
+      drawArtUrlToCanvas(canvas, artUrl, size, canvas.dataset.seed || '');
+    } else {
+      drawArt(canvas, canvas.dataset.seed || '', size);
+    }
   });
 }
 
