@@ -5326,28 +5326,37 @@ function openCacheDB() {
 async function saveCachedLibrary(tracks) {
   try {
     const db = await openCacheDB();
-    const tx = db.transaction(CACHE_STORE, 'readwrite');
-    const store = tx.objectStore(CACHE_STORE);
-    store.clear();
-    // Store only serialisable fields — no File objects
-    for (const t of tracks) {
-      if (t.saved) continue; // OPFS tracks handled separately
-      store.put({
-        id: t.id, jellyfinId: t.jellyfinId, title: t.title,
-        artist: t.artist, albumArtist: t.albumArtist, album: t.album,
-        genre: t.genre, trackNumber: t.trackNumber, duration: t.duration,
-        year: t.year || 0, artSeed: t.artSeed, artUrl: t.artUrl,
-        streamUrl: t.streamUrl, picture: null, file: null, saved: false,
+    // Clear first
+    await new Promise((res, rej) => {
+      const tx = db.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).clear();
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+    // Write in batches of 2000 to avoid transaction size limits
+    const toSave = tracks.filter(t => !t.saved).map(t => ({
+      id: t.id, jellyfinId: t.jellyfinId, title: t.title,
+      artist: t.artist, albumArtist: t.albumArtist, album: t.album,
+      genre: t.genre, trackNumber: t.trackNumber, duration: t.duration,
+      year: t.year || 0, artSeed: t.artSeed, artUrl: t.artUrl,
+      streamUrl: t.streamUrl, picture: null, file: null, saved: false,
+    }));
+    const BATCH = 2000;
+    for (let i = 0; i < toSave.length; i += BATCH) {
+      const chunk = toSave.slice(i, i + BATCH);
+      await new Promise((res, rej) => {
+        const tx = db.transaction(CACHE_STORE, 'readwrite');
+        const store = tx.objectStore(CACHE_STORE);
+        for (const t of chunk) store.put(t);
+        tx.oncomplete = res; tx.onerror = rej;
       });
     }
-    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
     db.close();
-    // Store metadata: timestamp and track count
     localStorage.setItem(CACHE_META_KEY, JSON.stringify({
-      ts: Date.now(), count: tracks.filter(t => !t.saved).length,
+      ts: Date.now(), count: toSave.length,
     }));
   } catch(e) {
     console.warn('Cache write failed:', e);
+    localStorage.removeItem(CACHE_META_KEY); // Don't claim cache exists if save failed
   }
 }
 
