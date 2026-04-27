@@ -4,6 +4,14 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 
 ---
 
+## v0.9 — 27 April 2026
+- Fixed library cache failing silently for large libraries (41,000+ tracks)
+- IndexedDB writes now batched in chunks of 2,000 tracks to avoid transaction size limits
+- If cache save fails, meta key is removed so next load does a clean fetch rather than loading an empty cache
+- Cache now correctly persists between sessions — library loads instantly after first fetch
+
+---
+
 ## v0.8 — 26 April 2026
 - Background library sync is now fully silent — no loading spinner, no re-render while browsing
 - Sync runs 2 seconds after cache load, invisible to the user
