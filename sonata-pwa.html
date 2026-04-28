@@ -844,6 +844,118 @@ body {
 .wheel-btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--border); }
 .wheel-btn svg { flex-shrink: 0; }
 
+.quickfire-btn {
+  background: var(--blue);
+  color: #fff;
+  border: var(--bw) solid var(--border);
+  padding: 24px 28px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-width: 280px;
+  transition: all 0.1s;
+  box-shadow: 5px 5px 0 var(--border);
+  margin: 18px 18px 18px 0;
+  text-transform: uppercase;
+}
+.quickfire-btn:hover { filter: brightness(0.9); }
+.quickfire-btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--border); }
+.quickfire-btn svg { flex-shrink: 0; }
+
+/* Selection mode: action bar + tile state */
+#quickfire-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--blue);
+  color: #fff;
+  border-bottom: var(--bw) solid var(--border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#quickfire-bar .qf-msg {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+}
+#quickfire-bar .qf-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+  margin-left: 10px;
+}
+#quickfire-bar .qf-actions { display: flex; gap: 10px; }
+.qf-cancel {
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+  padding: 8px 16px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.qf-cancel:hover { background: rgba(255,255,255,0.15); }
+.qf-create {
+  background: var(--accent);
+  border: 2px solid var(--border);
+  color: #fff;
+  padding: 8px 18px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.qf-create:disabled {
+  background: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.55);
+  border-color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+}
+.qf-create:not(:disabled):hover { filter: brightness(0.9); }
+
+.home-album-card.qf-selecting { cursor: pointer; position: relative; }
+.home-album-card.qf-selecting .card-art { transition: transform 0.1s; }
+.home-album-card.qf-selected {
+  outline: 4px solid var(--blue);
+  outline-offset: -4px;
+}
+.home-album-card.qf-selected .card-art { transform: scale(0.96); }
+.home-album-card .qf-tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: var(--blue);
+  color: #fff;
+  border: 2px solid var(--border);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  box-shadow: 2px 2px 0 var(--border);
+}
+.home-album-card.qf-selected .qf-tick { display: flex; }
+
+@media (max-width: 600px) {
+  .quickfire-btn { width: calc(100% - 36px); min-width: 0; padding: 18px; font-size: 18px; margin: 0 18px 18px 18px; }
+  #quickfire-bar .qf-msg { font-size: 16px; }
+  #quickfire-bar .qf-actions { width: 100%; justify-content: stretch; }
+  #quickfire-bar .qf-actions button { flex: 1; }
+}
+
 .home-section-bar {
   display: flex;
   align-items: center;
@@ -2566,6 +2678,8 @@ const state = {
   // Cleared whenever state.tracks changes; rebuilt lazily by ensureIndexes().
   indexes: null,
   homeShuffle: null,   // Cached random selection of 12 albums for the home view
+  quickfireMode: false,      // True when the user is picking 4 albums for a Quickfire playlist
+  quickfireSelected: [],     // Albums (by string key) selected for the in-progress Quickfire
 };
 
 try {
@@ -3636,12 +3750,44 @@ function renderHomeView() {
   ensureHomePicks();
   const picks = state.homeShuffle;
 
-  const cards = picks.map(info => `
-    <div class="grid-card home-album-card" data-album="${esc(info.album)}" data-type="${info._type || 'album'}">
+  const inSelect  = state.quickfireMode;
+  const selected  = new Set(state.quickfireSelected);
+  const QF_TARGET = 4;
+
+  const cards = picks.map(info => {
+    const isSel = selected.has(info.album);
+    return `
+    <div class="grid-card home-album-card${inSelect ? ' qf-selecting' : ''}${isSel ? ' qf-selected' : ''}" data-album="${esc(info.album)}" data-type="${info._type || 'album'}">
+      <div class="qf-tick"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
       <div class="card-sublabel">${esc(info.artist)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  // Selection-mode action bar (shown above the grid when picking)
+  const qfBar = inSelect ? `
+    <div id="quickfire-bar">
+      <div>
+        <span class="qf-msg">Pick 4 albums</span>
+        <span class="qf-count">${state.quickfireSelected.length} of ${QF_TARGET}</span>
+      </div>
+      <div class="qf-actions">
+        <button class="qf-cancel" id="qf-cancel-btn">Cancel</button>
+        <button class="qf-create" id="qf-create-btn"${state.quickfireSelected.length === QF_TARGET ? '' : ' disabled'}>Create &amp; Play</button>
+      </div>
+    </div>` : '';
+
+  // Reshuffle is hidden during selection so we can't pull picks out from under it
+  const sectionBar = inSelect
+    ? `<div class="home-section-bar"><span class="home-section-title">Tap 4 albums for your Quickfire</span></div>`
+    : `<div class="home-section-bar">
+        <span class="home-section-title">Picked for you</span>
+        <button class="home-reshuffle" id="home-reshuffle-btn">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Reshuffle
+        </button>
+      </div>`;
 
   content.innerHTML = `
     <div class="home-hero">
@@ -3653,36 +3799,163 @@ function renderHomeView() {
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>
         Wheel of Fortune
       </button>
-    </div>
-    <div class="home-section-bar">
-      <span class="home-section-title">Picked for you</span>
-      <button class="home-reshuffle" id="home-reshuffle-btn">
-        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Reshuffle
+      <button class="quickfire-btn" id="quickfire-btn" title="Build a 4-album shuffle from today's picks">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Quickfire Playlist
       </button>
     </div>
+    ${qfBar}
+    ${sectionBar}
     <div class="grid-view" style="border-top:none">${cards}</div>`;
 
   initArtCanvases();
 
   document.getElementById('wheel-btn').onclick = wheelOfFortune;
-  document.getElementById('home-reshuffle-btn').onclick = () => { reshuffleHome(); renderView(); };
+  document.getElementById('quickfire-btn').onclick = startQuickfireSelection;
+  if (!inSelect) {
+    document.getElementById('home-reshuffle-btn').onclick = () => { reshuffleHome(); renderView(); };
+  } else {
+    document.getElementById('qf-cancel-btn').onclick = cancelQuickfireSelection;
+    document.getElementById('qf-create-btn').onclick = createQuickfirePlaylist;
+  }
 
   content.querySelectorAll('.home-album-card').forEach(card => {
     card.onclick = () => {
-      const type  = card.dataset.type;
       const album = card.dataset.album;
-      // Play the album immediately (sorted by track number)
+      const type  = card.dataset.type;
+      if (state.quickfireMode) {
+        toggleQuickfireSelection(album);
+        return;
+      }
+      // Default behaviour: play the album and drill in
       const tracks = (state.indexes && state.indexes.tracksByAlbum[album])
         ? state.indexes.tracksByAlbum[album].slice().sort((a,b) => (a.trackNumber||0) - (b.trackNumber||0))
         : getAlbumTracks(album).sort((a,b) => (a.trackNumber||0) - (b.trackNumber||0));
       if (tracks.length) playTracksAt(tracks, 0);
-      // Drill into the album view as well
       state.currentView = type === 'compilation' ? 'compilations' : (type === 'djmix' ? 'djmixes' : 'albums');
       state.drillTarget = { type: type === 'compilation' ? 'compilation' : (type === 'djmix' ? 'djmix' : 'album'), value: album };
       renderView();
     };
   });
+}
+
+// ══════════════════════════════════════════════
+//  QUICKFIRE PLAYLIST
+//  Pick 4 albums from today's home picks, shuffle their tracks, save as a playlist
+// ══════════════════════════════════════════════
+function startQuickfireSelection() {
+  if (!state.homeShuffle || state.homeShuffle.length < 4) {
+    showToast('Not enough albums to choose from');
+    return;
+  }
+  state.quickfireMode = true;
+  state.quickfireSelected = [];
+  renderView();
+}
+
+function cancelQuickfireSelection() {
+  state.quickfireMode = false;
+  state.quickfireSelected = [];
+  renderView();
+}
+
+function toggleQuickfireSelection(album) {
+  const idx = state.quickfireSelected.indexOf(album);
+  if (idx !== -1) {
+    state.quickfireSelected.splice(idx, 1);
+  } else {
+    if (state.quickfireSelected.length >= 4) {
+      // Already at the cap — replace the oldest selection with this one
+      // No, simpler: just refuse and toast
+      showToast('4 albums already chosen — deselect one to swap');
+      return;
+    }
+    state.quickfireSelected.push(album);
+  }
+  renderView();
+}
+
+// Compute the next Quickfire name for today, e.g. "28/4 Quickfire 1", "28/4 Quickfire 2"
+function nextQuickfireName() {
+  const d = new Date();
+  const stamp = `${d.getDate()}/${d.getMonth() + 1}`;
+  const re = new RegExp(`^${stamp.replace('/', '\\/')}\\s+Quickfire\\s+(\\d+)$`);
+  let max = 0;
+  for (const pl of (state.playlists || [])) {
+    const m = (pl.name || '').match(re);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) max = n;
+    }
+  }
+  return `${stamp} Quickfire ${max + 1}`;
+}
+
+async function createQuickfirePlaylist() {
+  if (state.quickfireSelected.length !== 4) return;
+
+  // Collect every track from the 4 selected albums
+  const selectedAlbums = state.quickfireSelected.slice();
+  const allTracks = [];
+  for (const album of selectedAlbums) {
+    const tracks = (state.indexes && state.indexes.tracksByAlbum[album])
+      ? state.indexes.tracksByAlbum[album]
+      : getAlbumTracks(album);
+    allTracks.push(...tracks);
+  }
+
+  if (!allTracks.length) {
+    showToast('Selected albums had no tracks');
+    return;
+  }
+
+  // Fisher-Yates shuffle so playback order is randomised across all four albums
+  for (let i = allTracks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allTracks[i], allTracks[j]] = [allTracks[j], allTracks[i]];
+  }
+
+  const name = nextQuickfireName();
+
+  // Exit selection mode immediately so the UI feels responsive
+  state.quickfireMode = false;
+  state.quickfireSelected = [];
+
+  // Create the playlist (Jellyfin or local-only fallback)
+  const pl = await createJellyfinPlaylist(name);
+  pl.trackIds = allTracks.map(t => t.id);
+
+  // Bulk-add to Jellyfin if connected. Single call with comma-separated IDs.
+  if (jellyfin.connected && pl.id && !/^[0-9]{13}$/.test(pl.id)) {
+    try {
+      const ids = allTracks.map(t => t.id).join(',');
+      await jfPost(`/Playlists/${pl.id}/Items?Ids=${ids}&UserId=${jellyfin.userId}`, {});
+      // Refresh entry IDs for delete-track-from-playlist support later
+      const items = await jfGet(`/Playlists/${pl.id}/Items?UserId=${jellyfin.userId}`);
+      pl._entryIds = {};
+      for (const i of (items.Items || [])) {
+        pl._entryIds[i.Id] = i.PlaylistItemId;
+      }
+    } catch(e) {
+      console.warn('Quickfire bulk-add failed, playlist created but empty server-side:', e);
+    }
+  }
+
+  state.playlists.push(pl);
+  savePlaylists();
+  renderPlaylists();
+
+  // Start playback from the shuffled track order
+  playTracksAt(allTracks, 0);
+  showToast(`${name} — playing ${allTracks.length} tracks`);
+
+  // Route into the playlist's track view so the user can see what they made
+  state.currentView = 'playlist';
+  state.drillTarget = { type: 'playlist', value: pl.id };
+  // Sync nav highlighting so the active state lines up with the new view
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(n => n.classList.toggle('active', n.dataset.view === 'playlists-mobile'));
+  renderView();
 }
 
 function wheelOfFortune() {
