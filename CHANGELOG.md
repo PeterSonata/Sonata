@@ -4,6 +4,96 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 
 ---
 
+## v0.11.2 — 28 April 2026
+
+### Wheel of Fortune
+- Now navigates to the album track listing after spinning, so the listener can see what they're about to hear
+- Works for regular albums, compilations and DJ mixes alike — routes to the right view in each case
+- Sidebar and bottom nav highlighting updates to match the new view
+
+### Home Picks Persistence
+- "Picked for you" tiles now stay the same all day, midnight to midnight (local time)
+- First open of a new day generates a fresh set of 12 picks
+- Manual Reshuffle button still works as an immediate override and the new picks persist for the rest of the day too
+- Stored in localStorage with a date stamp; rolls automatically when the date changes
+- Survives a manual library refresh — picks are validated against the freshly-built indexes and any albums that no longer resolve are quietly topped up
+
+---
+
+## v0.11.1 — 28 April 2026
+
+### Loading Screen
+- Test card now shows on every cold open, not just first install or manual refresh
+- Minimum display time of 1.5 seconds so the test card actually has a moment to be seen
+- If the underlying load takes longer (e.g. first-run full fetch, slow network), the screen stays up until the load completes — the 1.5 seconds is a floor, not a ceiling
+- Status text under the card progresses through "tuning in…" → "reading library…" → "Connecting to Jellyfin…" → "Loading library…" as appropriate
+- Background sync remains silent — the splash only appears on app open, not during the 2-second-later silent sync
+
+---
+
+## v0.11 — 28 April 2026
+
+### Library Refresh
+- Refresh button removed from desktop top bar and mobile top bar (was too easy to hit by accident)
+- New Library section in Settings with a deliberate Refresh Library button
+- Confirmation modal warns that refresh takes around 20 minutes and Sonata is unusable until it finishes
+- Status line shows track count, album count, and when the library was last refreshed (e.g. "today at 14:32", "yesterday at 09:15", "26 Apr at 18:40")
+- Last-refresh timestamp stored in localStorage and updated on every successful fetch
+- Clarifying note explains that the silent background sync usually picks up new music automatically, so manual refresh is rarely needed
+
+### Album Artwork
+- Album tiles in the Albums view now show real Jellyfin artwork (previously fell back to the Mondrian generator)
+- Same fix applied to Compilations tiles, DJ Mixes (level 2) tiles, and the Home view "Picked for you" tiles
+- Artwork URL now stored in the pre-built indexes per album, so no extra lookups at render time
+- Mondrian art still used as the fallback when no artwork is available
+
+---
+
+## v0.10 — 28 April 2026
+
+### Loading Screen
+- Spinner replaced with the actual BBC Test Card F image
+- Faint CRT scanlines and vignette over the image for the right vintage feel
+- Status text below the card with a typewriter-style blinking cursor
+- Sonata-Loading-Screen.html no longer needed as a separate file — the test card is embedded directly in the app
+
+### Home View (new)
+- Now the default landing screen, replacing All Tracks
+- "Hello." header with live track and album counts
+- Wheel of Fortune button: picks a random album and plays it from track 1
+- 12 random album tiles ("Picked for you") drawn from albums, compilations and DJ mixes
+- Reshuffle button refreshes the picks on demand
+- Tiles also reshuffle automatically every time the user enters Home from another view
+- Clicking a tile plays the album immediately and drills into it
+- Home added as first item in both desktop sidebar and mobile bottom nav (replaces "Songs" tab on mobile)
+
+### Performance
+- Pre-built library indexes built once after fetch or cache load
+- Indexes cover artists, albums, compilations, DJ mixes, albums-by-artist and tracks-by-album
+- Album, Artist, Compilations and DJ Mixes views now read from the indexes instead of scanning all 41,988 tracks per click
+- O(N²) `albumCategory()` calls eliminated
+- Noticeable improvement in startup and view-switching speed
+
+### UI
+- "Personal Library" subtitle removed from sidebar
+- Track row + button is now a properly bordered button, always visible at 85% opacity
+- New + button in the desktop now-playing bar, right of the artist name
+- New + button in the mobile mini-player, left of the prev/play/next controls
+- All four + buttons (track row, full player, np-bar, mini-player) auto-disable when nothing is playing
+
+### Settings
+- New "Fetch All Artist Photos" button in the fanart.tv panel
+- Walks every distinct album-artist at the existing 1/sec MusicBrainz rate limit
+- Live progress display ("Fetching 47 / 312: Aphex Twin")
+- Stop button to interrupt a long fetch run
+- Skips artists already in the cache
+- Final summary message shown for 8 seconds after completion
+
+### Bugs Fixed
+- Library cache now correctly invalidates indexes on reload (previously stale indexes could survive a refresh)
+
+---
+
 ## v0.9 — 27 April 2026
 - Fixed library cache failing silently for large libraries (41,000+ tracks)
 - IndexedDB writes now batched in chunks of 2,000 tracks to avoid transaction size limits
@@ -125,6 +215,9 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 
 ## Planned
 - HTTPS / mixed content fix for artwork and audio on GitHub Pages
+- Sonos bridge: full proxy that holds the Jellyfin API key on the NAS so devices and RobLi Notes don't ship credentials to the browser
+- Cassette GIF background in the full-screen player
+- Music upload drag-and-drop into Sonata, writing to NAS via the Sonos bridge with optimistic local insertion (depends on bridge being live)
 - Metadata editor: edit track tags from within Sonata, writes back to MP3 files via Jellyfin
 - Sonos bridge: Node.js server setup on NAS
 - RobLi Notes: hardcoded workplace variant served via Newton SharePoint
