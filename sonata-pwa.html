@@ -2414,12 +2414,18 @@ body {
           Save
         </button>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-        <div id="fanart-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)">Not configured</div>
-        <button id="fanart-clear-cache-btn"
-          style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
-          Clear image cache
-        </button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+        <div id="fanart-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);flex:1;min-width:200px">Not configured</div>
+        <div style="display:flex;gap:14px">
+          <button id="fanart-clear-misses-btn"
+            style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
+            Retry failed lookups
+          </button>
+          <button id="fanart-clear-cache-btn"
+            style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
+            Clear image cache
+          </button>
+        </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:10px">
         <button id="fanart-fetch-all-btn"
@@ -5724,44 +5730,84 @@ async function processMBIDQueue() {
     return;
   }
 
+  // Run the lookup with a transient-error-tolerant cache strategy:
+  // - Network errors and 5xx (incl. 503 rate limit) are NOT cached as null,
+  //   so the same artist will be retried on a subsequent run.
+  // - 200 with no match IS cached as null (definitive miss).
+  // - User-Agent cannot be set from a browser fetch (forbidden header), so
+  //   we don't try. Browsers send their own UA which MB accepts.
+  // - Use unquoted query so MB does fuzzy/synonym matching ("Beatles" finds "The Beatles").
+  let mbid = null;
+  let definitive = true;
   try {
-    const q   = encodeURIComponent(`artist:"${artistName}"`);
-    const url = `https://musicbrainz.org/ws/2/artist/?query=${q}&limit=1&fmt=json`;
-    const r   = await fetch(url, { headers: { 'User-Agent': 'Sonata/1.0 (personal music player)' } });
-    if (r.ok) {
-      const data = await r.json();
-      const mbid = data.artists?.[0]?.id || null;
-      cache[artistName] = mbid;
-      saveMbidCache(cache);
-      resolve(mbid);
+    // Strip Lucene specials that would break the query, then trim
+    const clean = artistName.replace(/[+\-!(){}\[\]^"~*?:\\\/]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!clean) {
+      mbid = null;
     } else {
-      resolve(null);
+      const url = `https://musicbrainz.org/ws/2/artist/?query=${encodeURIComponent(clean)}&limit=1&fmt=json`;
+      const r   = await fetch(url);
+      if (r.ok) {
+        const data = await r.json();
+        mbid = data.artists?.[0]?.id || null;
+      } else if (r.status >= 500 || r.status === 429) {
+        // Transient — don't cache, will retry next time
+        definitive = false;
+        console.warn(`[Sonata] MB lookup transient error ${r.status} for "${artistName}"`);
+      } else {
+        // 4xx other than 429 — definitive miss
+        mbid = null;
+      }
     }
   } catch(e) {
-    resolve(null);
+    // Network failure — don't cache, will retry
+    definitive = false;
+    console.warn(`[Sonata] MB lookup network error for "${artistName}":`, e.message);
   }
 
+  if (definitive) {
+    cache[artistName] = mbid;
+    saveMbidCache(cache);
+  }
+  resolve(definitive ? mbid : null);
+
   mbidFetching = false;
-  // MusicBrainz rate limit: 1 request per second without a key
+  // MusicBrainz rate limit: 1 request per second
   setTimeout(processMBIDQueue, 1100);
 }
 
 // Fetch artist thumbnail from fanart.tv using MBID
+// Returns: { url, definitive } — definitive=false means transient error,
+//          should not be cached as null
 async function getFanartImage(mbid) {
-  if (!artistArt.apiKey || !mbid) return null;
+  if (!artistArt.apiKey || !mbid) return { url: null, definitive: true };
   try {
     const url = `https://webservice.fanart.tv/v3/music/${mbid}?api_key=${artistArt.apiKey}`;
     const r   = await fetch(url);
-    if (!r.ok) return null;
-    const data = await r.json();
-    // Prefer artistthumb, fall back to artistbackground
-    const thumbs = data.artistthumb || data.artistbackground || [];
-    if (!thumbs.length) return null;
-    // Pick highest liked
-    const best = thumbs.sort((a,b) => parseInt(b.likes||0) - parseInt(a.likes||0))[0];
-    return best?.url || null;
+    if (r.ok) {
+      const data = await r.json();
+      const thumbs = data.artistthumb || data.artistbackground || [];
+      if (!thumbs.length) return { url: null, definitive: true };
+      const best = thumbs.sort((a,b) => parseInt(b.likes||0) - parseInt(a.likes||0))[0];
+      return { url: best?.url || null, definitive: true };
+    }
+    if (r.status === 404) {
+      // No artist record on fanart.tv — definitive miss
+      return { url: null, definitive: true };
+    }
+    if (r.status === 401 || r.status === 403) {
+      console.warn(`[Sonata] fanart.tv auth error ${r.status} — check API key`);
+      return { url: null, definitive: false };
+    }
+    if (r.status >= 500 || r.status === 429) {
+      console.warn(`[Sonata] fanart.tv transient error ${r.status} for mbid ${mbid}`);
+      return { url: null, definitive: false };
+    }
+    // Other 4xx — treat as definitive miss
+    return { url: null, definitive: true };
   } catch(e) {
-    return null;
+    console.warn(`[Sonata] fanart.tv network error for mbid ${mbid}:`, e.message);
+    return { url: null, definitive: false };
   }
 }
 
@@ -5781,19 +5827,34 @@ async function fetchAndCacheArtistImage(artistName) {
   const cache = loadArtistCache();
   if (cache[artistName] !== undefined) return cache[artistName]; // already fetched
 
-  const mbid    = await getMBID(artistName);
-  const imgUrl  = mbid ? await getFanartImage(mbid) : null;
-
-  cache[artistName] = imgUrl; // null means confirmed no image
-  saveArtistCache(cache);
-
-  // If the artist view is currently showing, update the card
-  if (state.currentView === 'artists' && !state.drillTarget) {
-    const card = document.querySelector(`.grid-card[data-artist="${CSS.escape(artistName)}"]`);
-    if (card) injectArtistPhoto(card, artistName, imgUrl);
+  const mbid = await getMBID(artistName);
+  if (!mbid) {
+    // No MBID — could be a definitive miss or could be transient. The MBID
+    // cache layer already decided: if it cached null, it's definitive there
+    // and we mirror that decision here. If MBID was a transient failure, the
+    // cache wasn't updated, and re-running will retry.
+    const mbidCache = loadMbidCache();
+    if (mbidCache[artistName] === null) {
+      // Definitive: this artist is not on MusicBrainz at all
+      cache[artistName] = null;
+      saveArtistCache(cache);
+    }
+    return null;
   }
 
-  return imgUrl;
+  const result = await getFanartImage(mbid);
+  if (result.definitive) {
+    cache[artistName] = result.url;
+    saveArtistCache(cache);
+  }
+
+  // If the artist view is currently showing, update the card
+  if (result.url && state.currentView === 'artists' && !state.drillTarget) {
+    const card = document.querySelector(`.grid-card[data-artist="${CSS.escape(artistName)}"]`);
+    if (card) injectArtistPhoto(card, artistName, result.url);
+  }
+
+  return result.url;
 }
 
 // Inject a photo into an artist card (or leave Mondrian if no image)
@@ -5847,6 +5908,25 @@ document.getElementById('fanart-clear-cache-btn').onclick = () => {
   localStorage.removeItem(MBID_CACHE_KEY);
   updateFanartStatus();
   showToast('Artist image cache cleared');
+};
+
+// Clear only the null/failed entries from both caches, leaving real hits in place.
+// Useful when something went wrong during a previous Fetch All and a chunk of
+// artists got cached as "no image" when the truth was a transient error.
+document.getElementById('fanart-clear-misses-btn').onclick = () => {
+  const fanart = loadArtistCache();
+  const mbid   = loadMbidCache();
+  let cleared = 0;
+  for (const k of Object.keys(fanart)) {
+    if (fanart[k] === null) { delete fanart[k]; cleared++; }
+  }
+  for (const k of Object.keys(mbid)) {
+    if (mbid[k] === null) delete mbid[k];
+  }
+  saveArtistCache(fanart);
+  saveMbidCache(mbid);
+  updateFanartStatus();
+  showToast(`Cleared ${cleared.toLocaleString()} failed lookups — Fetch All will retry them`);
 };
 
 // ── Fetch All artist photos ──────────────────────────────────────────────────
