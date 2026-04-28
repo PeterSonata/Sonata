@@ -2030,10 +2030,7 @@ body {
   <button class="mob-icon-btn" id="mob-search-toggle" title="Search">
     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
   </button>
-  <button class="mob-icon-btn" id="mob-refresh-btn" title="Refresh library">
-    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-  </button>
-  <button class="mob-icon-btn settings-gear-mob" id="mob-settings-btn" title="Settings">
+<button class="mob-icon-btn settings-gear-mob" id="mob-settings-btn" title="Settings">
     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
 </div>
@@ -2102,11 +2099,7 @@ body {
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="search" placeholder="Search tracks, artists, albums…">
       </div>
-      <button id="load-btn" title="Refresh library from Jellyfin">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Refresh
-      </button>
-      <button class="settings-gear-btn" id="desktop-settings-btn" title="Settings">
+<button class="settings-gear-btn" id="desktop-settings-btn" title="Settings">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
 
@@ -2394,6 +2387,18 @@ body {
       </div>
     </div>
 
+    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Library</div>
+    <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
+      <div id="library-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);letter-spacing:0.06em;margin-bottom:14px">No library loaded yet</div>
+      <button id="library-refresh-btn"
+        style="background:var(--surface2);border:var(--bw) solid var(--border);color:var(--text);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;width:100%;">
+        Refresh Library
+      </button>
+      <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-top:10px">
+        Re-fetches every track from Jellyfin. With your library size this takes around 20 minutes and Sonata is unusable until it finishes. New tracks added on the NAS appear automatically via the silent background sync, so manual refresh is rarely needed.
+      </div>
+    </div>
+
     <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Artist Photography</div>
     <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
@@ -2637,14 +2642,18 @@ async function resolveJellyfinUser() {
 
 // Fetch full library from Jellyfin and populate state.tracks (non-saved)
 async function fetchLibrary(opts = {}) {
-  const silent = opts.silent || false;
+  const silent     = opts.silent || false;
+  const keepSplash = opts.keepSplash || false;  // caller will hide the splash itself
   if (!jellyfin.localUrl && !jellyfin.tailscaleUrl || !jellyfin.apiKey) {
     updateJfStatus('Not configured — open Settings to connect');
     return;
   }
 
-  if (!silent) {
+  if (!silent && !keepSplash) {
     document.getElementById('loading').classList.add('visible');
+    document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
+  } else if (!silent && keepSplash) {
+    // Splash already up from caller; just update status text
     document.getElementById('loading-text').textContent = 'Connecting to Jellyfin…';
   }
 
@@ -2712,6 +2721,7 @@ async function fetchLibrary(opts = {}) {
 
     jellyfin.connected = true;
     updateJfStatus(`Connected · ${items.length.toLocaleString()} tracks`);
+    localStorage.setItem('sonata_last_refresh', Date.now().toString());
     invalidateIndexes();
     buildIndexes();
     await saveCachedLibrary(state.tracks.filter(t => !t.saved));
@@ -2725,8 +2735,11 @@ async function fetchLibrary(opts = {}) {
     }
   }
 
-  if (!silent) {
+  if (!silent && !keepSplash) {
     document.getElementById('loading').classList.remove('visible');
+    renderView();
+  } else if (!silent && keepSplash) {
+    // Caller manages splash; still re-render the view
     renderView();
   }
 }
@@ -3082,8 +3095,6 @@ async function triggerRefresh() {
   showToast('Library refreshed');
 }
 
-document.getElementById('load-btn').onclick      = triggerRefresh;
-document.getElementById('mob-refresh-btn').onclick = triggerRefresh;
 
 // ══════════════════════════════════════════════
 //  AUDIO ENGINE
@@ -3390,14 +3401,6 @@ function updateMediaSession() {
 //  NAVIGATION
 // ══════════════════════════════════════════════
 function setView(view) {
-  // Reshuffle the home picks every time the user enters Home
-  // (clear when leaving so it reshuffles fresh on return)
-  if (view === 'home' && state.currentView !== 'home') {
-    state.homeShuffle = null;
-  } else if (view !== 'home' && state.currentView === 'home') {
-    state.homeShuffle = null;
-  }
-
   state.currentView = view;
   state.drillTarget = null;
   state.searchQ = '';
@@ -3524,8 +3527,8 @@ function pickRandomAlbums(n) {
   // Pool from albums + compilations + djmixes — anything with art and a play context
   const pool = [
     ...Object.values(state.indexes.albums),
-    ...Object.values(state.indexes.compilations).map(c => ({ album: c.album, artist: 'Various Artists', count: c.count, seed: c.seed, _type: 'compilation' })),
-    ...Object.values(state.indexes.djmixes).map(d => ({ album: d.album, artist: d.artist, count: d.count, seed: d.seed, _type: 'djmix' })),
+    ...Object.values(state.indexes.compilations).map(c => ({ album: c.album, artist: 'Various Artists', count: c.count, seed: c.seed, artUrl: c.artUrl, _type: 'compilation' })),
+    ...Object.values(state.indexes.djmixes).map(d => ({ album: d.album, artist: d.artist, count: d.count, seed: d.seed, artUrl: d.artUrl, _type: 'djmix' })),
   ];
   if (!pool.length) return [];
   // Fisher-Yates shuffle then take first n
@@ -3537,8 +3540,73 @@ function pickRandomAlbums(n) {
   return arr.slice(0, Math.min(n, arr.length));
 }
 
+// ══════════════════════════════════════════════
+//  HOME PICKS — persist for 24 hours, midnight to midnight (local time)
+// ══════════════════════════════════════════════
+const HOME_PICKS_KEY = 'sonata_home_picks';
+
+function todayKey() {
+  // Local-time YYYY-MM-DD, used to detect midnight rollover
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function loadStoredHomePicks() {
+  try {
+    const raw = localStorage.getItem(HOME_PICKS_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.day !== todayKey()) return null;       // stale, midnight has rolled
+    if (!Array.isArray(data.picks) || !data.picks.length) return null;
+    return data.picks;
+  } catch(e) { return null; }
+}
+
+function saveStoredHomePicks(picks) {
+  try {
+    localStorage.setItem(HOME_PICKS_KEY, JSON.stringify({ day: todayKey(), picks }));
+  } catch(e) { /* quota — non-fatal */ }
+}
+
+// Pick fresh albums and persist them for the rest of the day
 function reshuffleHome() {
   state.homeShuffle = pickRandomAlbums(12);
+  saveStoredHomePicks(state.homeShuffle);
+}
+
+// Use today's stored picks if they exist and the albums still resolve, otherwise pick fresh
+function ensureHomePicks() {
+  if (state.homeShuffle && state.homeShuffle.length) {
+    // Already have picks in memory — but check they're not from a previous day
+    const stored = loadStoredHomePicks();
+    if (stored) return;       // today's picks still valid in storage, in-memory copy is fine
+    // Stored picks have rolled over to a new day — discard memory copy
+    state.homeShuffle = null;
+  }
+  const stored = loadStoredHomePicks();
+  if (stored && state.indexes) {
+    // Validate: album titles may have shifted between picks. Drop any that no
+    // longer resolve to a track list, top up from a fresh shuffle to keep 12.
+    const valid = stored.filter(p => state.indexes.tracksByAlbum[p.album] && state.indexes.tracksByAlbum[p.album].length);
+    if (valid.length === stored.length) {
+      state.homeShuffle = valid;
+      return;
+    }
+    // Top up missing slots without rerolling the whole set
+    const needed = 12 - valid.length;
+    if (needed > 0) {
+      const existingAlbums = new Set(valid.map(p => p.album));
+      const extras = pickRandomAlbums(12).filter(p => !existingAlbums.has(p.album)).slice(0, needed);
+      state.homeShuffle = [...valid, ...extras];
+      saveStoredHomePicks(state.homeShuffle);
+      return;
+    }
+  }
+  // No valid stored picks — fresh shuffle
+  reshuffleHome();
 }
 
 function renderHomeView() {
@@ -3558,14 +3626,13 @@ function renderHomeView() {
     return;
   }
 
-  // Pick 12 random albums on every render unless we've already cached for this session view
-  // (cleared on currentView change away from home)
-  if (!state.homeShuffle) reshuffleHome();
+  // Today's persistent picks — same set midnight to midnight, then rolls
+  ensureHomePicks();
   const picks = state.homeShuffle;
 
   const cards = picks.map(info => `
     <div class="grid-card home-album-card" data-album="${esc(info.album)}" data-type="${info._type || 'album'}">
-      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
       <div class="card-sublabel">${esc(info.artist)}</div>
     </div>`).join('');
@@ -3617,10 +3684,28 @@ function wheelOfFortune() {
   if (!state.indexes) { showToast('Library not loaded yet'); return; }
   const picks = pickRandomAlbums(1);
   if (!picks.length) { showToast('No albums to spin'); return; }
-  const album = picks[0].album;
+  const pick = picks[0];
+  const album = pick.album;
   const tracks = (state.indexes.tracksByAlbum[album] || []).slice().sort((a,b) => (a.trackNumber||0) - (b.trackNumber||0));
   if (!tracks.length) { showToast('That album is empty'); return; }
   playTracksAt(tracks, 0);
+  // Navigate to the album's track listing so the user can see what's playing
+  const isCompilation = pick._type === 'compilation';
+  const isDjmix       = pick._type === 'djmix';
+  state.currentView = isCompilation ? 'compilations' : (isDjmix ? 'djmixes' : 'albums');
+  state.drillTarget = {
+    type:  isCompilation ? 'compilation' : (isDjmix ? 'djmix' : 'album'),
+    value: album,
+  };
+  // Sync nav highlighting to match the new view
+  const bnavMap = {
+    'albums': 'albums',
+    'compilations': 'mixes-mobile',
+    'djmixes': 'mixes-mobile',
+  };
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === state.currentView));
+  document.querySelectorAll('.bnav-item').forEach(n => n.classList.toggle('active', n.dataset.view === (bnavMap[state.currentView] || state.currentView)));
+  renderView();
   showToast(`Spinning: ${album}`);
 }
 
@@ -3843,20 +3928,23 @@ function buildIndexes() {
 
     if (category === 'album') {
       if (!albums[key]) {
-        albums[key] = { album: t.album, artist: aa, count: 0, seed: t.artSeed, year: t.year || 0 };
+        albums[key] = { album: t.album, artist: aa, count: 0, seed: t.artSeed, year: t.year || 0, artUrl: t.artUrl || null };
       }
       albums[key].count++;
       if (t.year && (!albums[key].year || t.year < albums[key].year)) albums[key].year = t.year;
+      if (!albums[key].artUrl && t.artUrl) albums[key].artUrl = t.artUrl;
     } else if (category === 'compilation') {
       if (!compilations[t.album]) {
-        compilations[t.album] = { album: t.album, count: 0, seed: t.artSeed, year: t.year || 0 };
+        compilations[t.album] = { album: t.album, count: 0, seed: t.artSeed, year: t.year || 0, artUrl: t.artUrl || null };
       }
       compilations[t.album].count++;
+      if (!compilations[t.album].artUrl && t.artUrl) compilations[t.album].artUrl = t.artUrl;
     } else {
       if (!djmixes[t.album]) {
-        djmixes[t.album] = { album: t.album, artist: aa, count: 0, seed: t.artSeed, year: t.year || 0 };
+        djmixes[t.album] = { album: t.album, artist: aa, count: 0, seed: t.artSeed, year: t.year || 0, artUrl: t.artUrl || null };
       }
       djmixes[t.album].count++;
+      if (!djmixes[t.album].artUrl && t.artUrl) djmixes[t.album].artUrl = t.artUrl;
     }
   }
 
@@ -3887,7 +3975,9 @@ function ensureIndexes() {
 
 function invalidateIndexes() {
   state.indexes = null;
-  state.homeShuffle = null;
+  // Note: state.homeShuffle is NOT cleared here. Daily picks persist for 24h
+  // even across a library refresh; ensureHomePicks() validates album refs against
+  // the freshly-built indexes and tops up any that no longer resolve.
 }
 
 // ══════════════════════════════════════════════
@@ -4194,7 +4284,7 @@ function renderAlbumView() {
     const allSaved = albumTracks.length > 0 && albumTracks.every(t => state.savedIds.has(t.id));
     return `
     <div class="grid-card" data-album="${esc(info.album)}">
-      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
       <div class="card-sublabel" style="display:flex;align-items:center;justify-content:space-between">
         <span>${esc(info.artist)}</span>
@@ -4244,7 +4334,7 @@ function renderCompilationsView() {
 
   const cards = Object.values(map).sort((a,b) => a.album.localeCompare(b.album)).map(info => `
     <div class="grid-card" data-album="${esc(info.album)}" data-type="compilation">
-      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
       <div class="card-sublabel">${info.count} track${info.count !== 1 ? 's' : ''}</div>
     </div>`).join('');
@@ -4277,7 +4367,7 @@ function renderDJMixesView() {
       const aa = mix.artist;
       if (!djMap[aa]) djMap[aa] = {};
       const tracks = (tracksByAlbum[mix.album] || []).slice().sort((a,b) => (a.trackNumber||0) - (b.trackNumber||0));
-      djMap[aa][mix.album] = { album: mix.album, artist: aa, tracks, seed: mix.seed };
+      djMap[aa][mix.album] = { album: mix.album, artist: aa, tracks, seed: mix.seed, artUrl: mix.artUrl || (tracks[0] && tracks[0].artUrl) || null };
     }
   } else {
     for (const t of state.tracks) {
@@ -4287,7 +4377,7 @@ function renderDJMixesView() {
       if (cat !== 'djmix') continue;
       if (!djMap[aa]) djMap[aa] = {};
       const key = t.album;
-      if (!djMap[aa][key]) djMap[aa][key] = { album: t.album, artist: aa, tracks: [], seed: t.artSeed };
+      if (!djMap[aa][key]) djMap[aa][key] = { album: t.album, artist: aa, tracks: [], seed: t.artSeed, artUrl: t.artUrl || null };
       djMap[aa][key].tracks.push(t);
     }
     for (const dj of Object.values(djMap))
@@ -4301,7 +4391,7 @@ function renderDJMixesView() {
     const mixes = Object.values(djMap[djName] || {}).sort((a,b) => a.album.localeCompare(b.album));
     const cards = mixes.map(info => `
       <div class="grid-card" data-album="${esc(info.album)}" data-dj="${esc(info.artist)}">
-        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas></div>
+        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
         <div class="card-label">${esc(info.album)}</div>
         <div class="card-sublabel">${mixes.length > 1 ? info.tracks.length + ' tracks' : ''}</div>
       </div>`).join('');
@@ -5948,9 +6038,74 @@ document.getElementById('jf-connect-btn').onclick = async () => {
 };
 
 // ══════════════════════════════════════════════
+//  LIBRARY (Settings panel) — refresh + status
+// ══════════════════════════════════════════════
+function formatLastRefresh(ts) {
+  if (!ts) return 'never';
+  const d = new Date(parseInt(ts, 10));
+  if (isNaN(d.getTime())) return 'never';
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return `today at ${time}`;
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays === 1) return `yesterday at ${time}`;
+  return `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} at ${time}`;
+}
+
+function updateLibraryStatus() {
+  const el = document.getElementById('library-status');
+  if (!el) return;
+  const trackCount = state.tracks.filter(t => !t.saved).length;
+  const albumCount = state.indexes ? Object.keys(state.indexes.albums).length : 0;
+  if (!trackCount) {
+    el.textContent = 'No library loaded yet';
+    return;
+  }
+  const last = localStorage.getItem('sonata_last_refresh');
+  const when = formatLastRefresh(last);
+  el.textContent = `${trackCount.toLocaleString()} tracks · ${albumCount.toLocaleString()} albums · last refreshed ${when}`;
+}
+
+document.getElementById('library-refresh-btn').onclick = () => {
+  const ok = window.confirm(
+    'Refresh the entire library from Jellyfin?\n\n' +
+    'This will take around 20 minutes and Sonata will be unusable until it finishes.\n\n' +
+    'New tracks usually appear automatically via the background sync, so manual refresh is rarely needed.'
+  );
+  if (!ok) return;
+  closeSettings();
+  triggerRefresh();
+};
+
+// Refresh status whenever Settings is opened
+const _origOpenSettings = openSettings;
+openSettings = function() {
+  _origOpenSettings();
+  updateLibraryStatus();
+};
+
+// ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
 (async () => {
+  // Splash screen: always show the test card on cold open, with a floor of
+  // 1.5 seconds. If cache/fetch takes longer, the screen stays up until done.
+  const splashEl   = document.getElementById('loading');
+  const splashText = document.getElementById('loading-text');
+  const splashStart = Date.now();
+  const SPLASH_MIN_MS = 1500;
+  splashEl.classList.add('visible');
+  splashText.textContent = 'tuning in…';
+
+  const hideSplash = async () => {
+    const elapsed = Date.now() - splashStart;
+    if (elapsed < SPLASH_MIN_MS) {
+      await new Promise(r => setTimeout(r, SPLASH_MIN_MS - elapsed));
+    }
+    splashEl.classList.remove('visible');
+  };
+
   await loadSavedTracks();
 
   // Show whatever we have immediately — localStorage playlists load at state init
@@ -5959,22 +6114,31 @@ document.getElementById('jf-connect-btn').onclick = async () => {
 
   const hasServer = (jellyfin.localUrl || jellyfin.tailscaleUrl) && jellyfin.apiKey;
   if (hasServer) {
+    splashText.textContent = 'reading library…';
     const fromCache = await loadCachedLibrary();
     if (fromCache) {
-      // Library from cache — render immediately, then sync everything in background
+      // Library from cache — render immediately, hide splash (with floor),
+      // then sync everything silently in background
       renderPlaylists();
       renderView();
+      await hideSplash();
       setTimeout(async () => {
         try {
           await fetchLibrary({ silent: true });
         } catch(e) { /* keep cached version and localStorage playlists */ }
       }, 2000);
     } else {
-      // No cache — full load
-      await fetchLibrary();
+      // No cache — full load (fetchLibrary keeps the splash up via its own
+      // loading-text updates; we hand off without lowering the floor early)
+      splashText.textContent = 'first run, fetching everything…';
+      await fetchLibrary({ keepSplash: true });
       renderPlaylists();
       renderView();
+      await hideSplash();
     }
+  } else {
+    // No server configured — show splash for the minimum, then drop to empty state
+    await hideSplash();
   }
 })();
 </script>
