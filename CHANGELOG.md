@@ -4,6 +4,17 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 
 ---
 
+## v0.11.3 — 28 April 2026
+
+### Artist Photography
+- MusicBrainz query now uses unquoted, special-character-stripped lookup so "Beatles" finds "The Beatles", "AC/DC" doesn't break the Lucene parser, and so on
+- Removed the User-Agent header from MusicBrainz fetch — browsers refuse to set it on `fetch()`, and trying to do so could cause requests to fail outright in some environments. This is the most likely root cause of the 0-out-of-3,021 result the previous Fetch All run produced
+- Transient errors (HTTP 5xx, 429 rate-limit, network failures) no longer poison the cache as "no image". The result is only cached when it's a definitive answer (200 with no match, 404, or a real image URL). Anything else gets retried on the next pass
+- New "Retry failed lookups" button in Settings, next to "Clear image cache". Clears only the null entries from both the MusicBrainz and fanart.tv caches, leaving any real hits in place. Designed for exactly the situation above: a previous Fetch All filled the cache with false negatives, and you want to re-attempt them without losing legitimate hits
+- Console warnings logged for each transient failure during a fetch, so it's clear in DevTools whether MusicBrainz, fanart.tv, or the network is the culprit
+
+---
+
 ## v0.11.2 — 28 April 2026
 
 ### Wheel of Fortune
