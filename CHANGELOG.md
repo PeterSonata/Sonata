@@ -1,6 +1,66 @@
 # Sonata Changelog
 
-Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages.
+Personal music player PWA. Streams from Jellyfin on NAS via the Sonata Bridge.
+
+---
+
+## v0.14 — 29 April 2026
+
+### Bridge integration
+The Sonata Bridge is now Sonata's only point of contact with the outside world. The browser holds no API keys and talks to no third-party services directly. Every Jellyfin call, every fanart.tv lookup, and every MusicBrainz lookup is routed through the bridge running on the NAS, which terminates HTTPS via Let's Encrypt and attaches the relevant credentials server-side.
+
+### Settings simplification
+- Three fields removed from Settings (Jellyfin Local URL, Jellyfin Tailscale URL, Jellyfin API Key) and replaced with a single Bridge URL field
+- fanart.tv API key field removed entirely. The bridge holds the key; Sonata just calls /fanart/:mbid on the bridge
+- Connect & Load handler clears all the legacy localStorage entries (sonata_jf_url, sonata_jf_tailscale, sonata_jf_key, sonata_fanart_key) when a bridge URL is saved, so old credentials don't linger
+
+### Wins from doing this properly
+- iPhone Safari works without certificate warnings or Mixed Content blocks
+- Artist photography starts working again — fanart.tv's broken CORS headers are no longer in the picture, since the bridge handles the call server-side
+- MusicBrainz calls are centrally rate-limited at 1/sec across all clients, with a proper User-Agent header that MB actually wants
+- API keys live in /volume1/sonata-bridge/.env on the NAS (chmod 600), not in browser localStorage
+
+### Bridge endpoints
+- /health — status and uptime check
+- /jellyfin/* — proxied Jellyfin API with API key attached server-side (header for fetch, query string for &lt;img&gt;/&lt;audio&gt; tags)
+- /fanart/:mbid — proxied fanart.tv lookup with 24h response cache
+- /mbid?artist=NAME — proxied MusicBrainz lookup with 24h response cache and central 1/sec rate limit
+- /stats — cache sizes and memory usage
+
+### Migration notes
+On first load of v0.14, you will need to open Settings and paste your bridge URL (e.g. https://yourname.duckdns.org:5443). After that, Sonata fetches the library through the bridge and the userId is re-resolved automatically. The library cache survives the change so no full re-fetch is needed.
+
+---
+
+## v0.13 — 28 April 2026
+
+### Desktop Player Redesign
+- Bottom player rebalanced into three equal thirds: track info on the left, playback controls + progress bar in the middle, volume + speaker selector on the right
+- Track info section is no longer fixed at 280px — it now uses its third of the available width like everyone else, so on wide screens the title and artist have proper room to breathe
+- Cast button moved into the playback controls cluster, sitting just after the repeat icon. It's now icon-only (no "CAST" text) since it's clearly a playback control by position. Stays blue when a Sonos room is connected, like the existing shuffle-on / repeat-on states
+
+### Capybara Volume Slider
+- Volume control is significantly bigger: 38px tap target (up from 6px), 14px-tall track, properly clickable
+- A small capybara photo rides the slider, sitting on the fill edge wherever the volume happens to be
+- Capybara does a little bob animation when the volume is changed
+- Click anywhere on the track to set volume; click and hold to drag the capybara along
+- Touch drag support too, in case the desktop is touch-enabled
+
+---
+
+## v0.12 — 28 April 2026
+
+### Quickfire Playlist (new)
+- New Quickfire Playlist button on the Home page, sat next to Wheel of Fortune
+- Tap it to enter selection mode: an action bar appears at the top of the picks grid, the album tiles become tappable for selection rather than playback, and a tick badge appears on each chosen tile
+- Select exactly 4 albums from today's "Picked for you" set (the selection is constrained to the random daily picks, not the wider library)
+- Selecting a 5th album shows a toast asking you to deselect one first
+- A "Cancel" button bails out, a "Create & Play" button activates once 4 are chosen
+- On Create: every track from the 4 albums is gathered, Fisher-Yates shuffled, and saved as a new playlist named "DD/M Quickfire N" (e.g. "28/4 Quickfire 1"). The number auto-increments per day so successive Quickfires on the same day get sequential names
+- The new playlist appears in the sidebar / mobile playlist list immediately and starts playing in shuffled order
+- Routes straight into the playlist's track listing view after creation, so you can see what you just made
+- Saved to Jellyfin via a single bulk-add call (no 4-times-around-the-loop) when connected, or kept local-only as a fallback
+- Reshuffle button is hidden during selection so you can't pull the rug out from your own choice
 
 ---
 
@@ -12,6 +72,7 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 - Transient errors (HTTP 5xx, 429 rate-limit, network failures) no longer poison the cache as "no image". The result is only cached when it's a definitive answer (200 with no match, 404, or a real image URL). Anything else gets retried on the next pass
 - New "Retry failed lookups" button in Settings, next to "Clear image cache". Clears only the null entries from both the MusicBrainz and fanart.tv caches, leaving any real hits in place. Designed for exactly the situation above: a previous Fetch All filled the cache with false negatives, and you want to re-attempt them without losing legitimate hits
 - Console warnings logged for each transient failure during a fetch, so it's clear in DevTools whether MusicBrainz, fanart.tv, or the network is the culprit
+- Diagnosis revealed that fanart.tv currently returns broken CORS headers (`Access-Control-Allow-Origin: *, *`) which any browser refuses to honour. v0.14 solves this by routing through the bridge
 
 ---
 
@@ -66,7 +127,6 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 - Spinner replaced with the actual BBC Test Card F image
 - Faint CRT scanlines and vignette over the image for the right vintage feel
 - Status text below the card with a typewriter-style blinking cursor
-- Sonata-Loading-Screen.html no longer needed as a separate file — the test card is embedded directly in the app
 
 ### Home View (new)
 - Now the default landing screen, replacing All Tracks
@@ -74,164 +134,26 @@ Personal music player PWA. Streams from Jellyfin on NAS, served via GitHub Pages
 - Wheel of Fortune button: picks a random album and plays it from track 1
 - 12 random album tiles ("Picked for you") drawn from albums, compilations and DJ mixes
 - Reshuffle button refreshes the picks on demand
-- Tiles also reshuffle automatically every time the user enters Home from another view
-- Clicking a tile plays the album immediately and drills into it
-- Home added as first item in both desktop sidebar and mobile bottom nav (replaces "Songs" tab on mobile)
 
 ### Performance
 - Pre-built library indexes built once after fetch or cache load
-- Indexes cover artists, albums, compilations, DJ mixes, albums-by-artist and tracks-by-album
 - Album, Artist, Compilations and DJ Mixes views now read from the indexes instead of scanning all 41,988 tracks per click
-- O(N²) `albumCategory()` calls eliminated
 - Noticeable improvement in startup and view-switching speed
-
-### UI
-- "Personal Library" subtitle removed from sidebar
-- Track row + button is now a properly bordered button, always visible at 85% opacity
-- New + button in the desktop now-playing bar, right of the artist name
-- New + button in the mobile mini-player, left of the prev/play/next controls
-- All four + buttons (track row, full player, np-bar, mini-player) auto-disable when nothing is playing
-
-### Settings
-- New "Fetch All Artist Photos" button in the fanart.tv panel
-- Walks every distinct album-artist at the existing 1/sec MusicBrainz rate limit
-- Live progress display ("Fetching 47 / 312: Aphex Twin")
-- Stop button to interrupt a long fetch run
-- Skips artists already in the cache
-- Final summary message shown for 8 seconds after completion
-
-### Bugs Fixed
-- Library cache now correctly invalidates indexes on reload (previously stale indexes could survive a refresh)
-
----
-
-## v0.9 — 27 April 2026
-- Fixed library cache failing silently for large libraries (41,000+ tracks)
-- IndexedDB writes now batched in chunks of 2,000 tracks to avoid transaction size limits
-- If cache save fails, meta key is removed so next load does a clean fetch rather than loading an empty cache
-- Cache now correctly persists between sessions — library loads instantly after first fetch
-
----
-
-## v0.8 — 26 April 2026
-- Background library sync is now fully silent — no loading spinner, no re-render while browsing
-- Sync runs 2 seconds after cache load, invisible to the user
-- Only explicit Refresh or Connect & Load triggers visible loading
-
----
-
-## v0.7 — 26 April 2026
-### Jellyfin & Network
-- Dual server URL: local network (fast) + Tailscale fallback (remote)
-- Sonata tries local IP first with 2s timeout, silently falls back to Tailscale
-- Library cache is now URL-agnostic — survives switching between local and Tailscale addresses
-- Library cache survives code updates — no full reload needed when new version is deployed
-
-### Album Pages
-- Album artwork hero image at top of every album track list
-- Album title, artist, year and track count displayed in hero
-- Play button built into hero header
-- Hero responsive — smaller on mobile
-
-### Playlist Pages
-- 2×2 artwork collage using real Jellyfin album art (Mondrian fallback)
-- Play button added to playlist header
-
-### Playlist Persistence
-- Playlists shown immediately from localStorage on every open before any network call
-- Jellyfin playlist sync runs in background and merges rather than replaces
-- Local-only playlists (created offline) preserved alongside server playlists
-- Every playlist change saved to localStorage as it happens
-
----
-
-## v0.6 — 26 April 2026
-### Architecture
-- Jellyfin replaces local file picker entirely — no more folder/file selection
-- Library fetched from Jellyfin API on load (tracks, metadata, artwork URLs, stream URLs)
-- Audio playback streams directly from Jellyfin
-- Playlists created, updated and deleted via Jellyfin API
-- OPFS offline saving now fetches from Jellyfin stream URL
-- jsmediatags library removed — tags come from Jellyfin
-
-### Caching
-- Library cached to IndexedDB after first load
-- Subsequent opens load instantly from cache
-- Background sync with Jellyfin after cache load
-- Refresh button forces full re-fetch
-
-### Navigation
-- Artist pages now show album tiles (artwork, name, year) rather than flat track list
-- Albums sorted chronologically by year within artist pages
-- Artist hero (photo + name) shown at top of artist album grid
-- Clicking album tile opens track list; Back returns to artist albums
-- Search results show matching artist tiles first, then track/album results
-- Clicking artist in search goes to their album grid
-
-### Settings
-- Jellyfin Connection section added: server URL + API key
-- Credentials stored in localStorage, never in the HTML file
-
-### Sonos
-- Sonos bridge now passes Jellyfin stream URL directly to speakers
-- Sonos pulls audio from NAS — phone is not in the audio chain
-
----
-
-## v0.5 — April 2026
-### Core Features
-- Full playback controls: play, pause, skip, shuffle, repeat, volume
-- Media Session API: lock screen and Apple Watch Now Playing controls
-- Remote Playback API: AirPlay and Chromecast support
-- Sonos bridge integration via Node.js server on NAS
-- NAS connection manager: tries Tailscale first, falls back to QuickConnect
-
-### Library & Navigation
-- Songs, Artists, Albums, Genres, Compilations, DJ Mixes views
-- Artists view: groups by Album Artist, filters Various Artists and single-track artists
-- Albums view: proper artist albums only
-- Compilations: albums where Album Artist is Various Artists / VA
-- DJ Mixes: named DJ as Album Artist with 3+ distinct track artists
-- All album drill-downs sort by track number
-- Search across tracks, artists and albums
-- Saved tracks view (OPFS offline)
-
-### Skins
-- Ten switchable skins: De Stijl, Noir, Scully, Vinyl, Blueprint, Tokyo Neon, Arctic, Terracotta, Forest, Rose Gold
-- Scully palette derived from Peter's schnauzer: salt-and-pepper grey, purple collar, grass green, hotel cream
-- Mondrian art generator adapts colours to each skin
-
-### Artist Photography
-- fanart.tv integration: artist photos fetched automatically while browsing
-- MusicBrainz MBID lookup (rate-limited to 1/second) then fanart.tv image fetch
-- Photos cached permanently in localStorage, fade in over Mondrian art
-- API key field and cache clear button in Settings
-
-### Offline & Storage
-- OPFS offline track saving with progress overlay
-- Save individual tracks or entire albums to device
-- Saved tracks play without network connection
-
-### PWA
-- Installable on iPhone (Safari → Add to Home Screen) and Android (Chrome → Install)
-- Runs full screen, no browser chrome
-- Single self-contained HTML file
-- Served via GitHub Pages (HTTPS)
-
-### Bugs Fixed
-- Missing renderGenreView function causing full JS crash on startup
-- Broken single-quote inside template literal in playlist view
 
 ---
 
 ## Planned
-- HTTPS / mixed content fix for artwork and audio on GitHub Pages
-- Sonos bridge: full proxy that holds the Jellyfin API key on the NAS so devices and RobLi Notes don't ship credentials to the browser
+
+### Bridge expansion (next)
+The Sonata Bridge is now in production. Future improvements that build on it:
+- Music upload drag-and-drop into Sonata, writing to NAS via the bridge with optimistic local insertion
+- Metadata editor: edit track tags from within Sonata, writes back to MP3 files via the bridge
+- Cache-busting: version-stamp meta tag with localStorage comparison to force a fresh load when the deployed version differs from the cached one
 - Cassette GIF background in the full-screen player
-- Music upload drag-and-drop into Sonata, writing to NAS via the Sonos bridge with optimistic local insertion (depends on bridge being live)
-- Metadata editor: edit track tags from within Sonata, writes back to MP3 files via Jellyfin
-- Sonos bridge: Node.js server setup on NAS
+
+### Other
 - RobLi Notes: hardcoded workplace variant served via Newton SharePoint
-- Remote access for partner (port forwarding or alternative to Tailscale)
+- Remote access for partner via the bridge (no longer needs Tailscale)
 - Mobile app install documentation
 - Film library companion app (TMDB integration, TV-friendly interface)
+- A third Home button alongside Wheel of Fortune and Quickfire Playlist (idea TBC)
