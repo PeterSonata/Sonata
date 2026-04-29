@@ -524,7 +524,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0;
-  width: 280px;
+  flex: 1 1 0;
   min-width: 0;
   height: 100%;
   border-right: var(--bw) solid var(--border);
@@ -564,7 +564,7 @@ body {
 .np-add-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 #controls {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -573,6 +573,7 @@ body {
   padding: 0 20px;
   height: 100%;
   border-right: var(--bw) solid var(--border);
+  min-width: 0;
 }
 .ctrl-btns { display: flex; align-items: center; gap: 4px; }
 .ctrl-btn {
@@ -590,6 +591,7 @@ body {
 .ctrl-btn:hover { color: var(--text); background: var(--surface2); }
 .ctrl-btn:active { background: var(--accent2); }
 .ctrl-btn.active { color: var(--accent); }
+.ctrl-btn.casting { color: var(--blue); }
 
 #play-btn {
   width: 44px; height: 44px;
@@ -654,12 +656,13 @@ body {
 #vol-area {
   display: flex;
   align-items: center;
-  gap: 0;
-  width: 160px;
+  gap: 14px;
+  flex: 1 1 0;
   height: 100%;
-  justify-content: flex-end;
+  justify-content: center;
   border-left: none;
-  padding: 0 16px;
+  padding: 0 24px;
+  min-width: 0;
 }
 .vol-btn {
   background: none;
@@ -670,24 +673,61 @@ body {
   display: flex;
   align-items: center;
   transition: color 0.1s;
+  flex-shrink: 0;
 }
 .vol-btn:hover { color: var(--text); }
 #vol-bar {
   flex: 1;
-  height: 6px;
+  position: relative;
+  height: 38px;
+  cursor: pointer;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+}
+#vol-bar-track {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 14px;
   background: var(--surface2);
   border: 2px solid var(--border);
-  cursor: pointer;
-  max-width: 90px;
+  pointer-events: none;
+  box-sizing: border-box;
 }
 #vol-fill {
-  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 14px;
   background: var(--blue);
   width: 80%;
   pointer-events: none;
   transition: background 0.1s;
+  box-sizing: border-box;
 }
 #vol-bar:hover #vol-fill { background: var(--accent); }
+#vol-capy {
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background-image: url('data:image/jpeg;base64,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');
+  background-size: cover;
+  background-position: center;
+  border: 1.5px solid var(--border);
+  z-index: 2;
+  box-shadow: 1px 1px 0 var(--border);
+}
+#vol-bar.adjusting #vol-capy { animation: capy-bob 0.35s ease; }
+@keyframes capy-bob {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, -75%); }
+}
 
 /* ═══════════════════════════════════
    CONTEXT MENU
@@ -1960,28 +2000,6 @@ body {
 #fp-cast-btn:active { background: rgba(255,255,255,0.15); }
 #fp-cast-btn.casting { color: var(--accent2); }
 
-/* Desktop cast button */
-#desktop-cast-btn {
-  background: none;
-  border: none;
-  color: var(--text3);
-  cursor: pointer;
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transition: color 0.1s;
-  height: 100%;
-  border-left: var(--bw) solid var(--border);
-}
-#desktop-cast-btn:hover { color: var(--blue); }
-#desktop-cast-btn.casting { color: var(--blue); }
-
 /* ── Settings screen ── */
 #settings-overlay {
   position: fixed;
@@ -2249,6 +2267,9 @@ body {
       <button class="ctrl-btn" id="repeat-btn">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
+      <button class="ctrl-btn" id="desktop-cast-btn" title="Play on speaker">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>
+      </button>
     </div>
     <div class="progress-row">
       <span class="time-label" id="cur-time">0:00</span>
@@ -2260,11 +2281,11 @@ body {
     <button class="vol-btn" id="mute-btn">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" id="vol-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
     </button>
-    <div id="vol-bar"><div id="vol-fill"></div></div>
-    <button id="desktop-cast-btn" title="Play on speaker">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>
-      Cast
-    </button>
+    <div id="vol-bar" title="Volume">
+      <div id="vol-bar-track"></div>
+      <div id="vol-fill"></div>
+      <div id="vol-capy"></div>
+    </div>
   </div>
 </div>
 
@@ -2470,28 +2491,18 @@ body {
     <div class="settings-section-label">Appearance</div>
     <div id="skin-grid"></div>
 
-    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Jellyfin Connection</div>
+    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Connection</div>
     <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
-        Sonata streams from <strong>Jellyfin</strong> on your NAS. Enter your local IP for home use and your Tailscale IP for remote access. Get an API key from <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Jellyfin → Dashboard → API Keys</span>.
-      </div>
-      <div style="margin-bottom:8px">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Local URL (home network)</div>
-        <input type="text" id="jf-url-input" placeholder="http://192.168.1.83:8096"
-          style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
-      </div>
-      <div style="margin-bottom:8px">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Tailscale URL (away from home)</div>
-        <input type="text" id="jf-tailscale-input" placeholder="http://100.66.189.116:8096"
-          style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
+        Sonata talks to your NAS through the <strong>Sonata Bridge</strong>. The bridge holds your Jellyfin and fanart.tv API keys, so they don't need to live in your browser. Paste the bridge URL below.
       </div>
       <div style="margin-bottom:12px">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">API Key</div>
-        <input type="text" id="jf-key-input" placeholder="Paste your Jellyfin API key…"
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Bridge URL</div>
+        <input type="text" id="bridge-url-input" placeholder="https://yourname.duckdns.org:5443"
           style="width:100%;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;">
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button id="jf-connect-btn"
+        <button id="bridge-connect-btn"
           style="background:var(--blue);border:var(--bw) solid var(--border);color:#fff;padding:10px 20px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;flex-shrink:0;">
           Connect &amp; Load
         </button>
@@ -2514,17 +2525,7 @@ body {
     <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Artist Photography</div>
     <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
-        Sonata fetches artist photography from <strong>fanart.tv</strong> automatically. Register free at
-        <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">fanart.tv</span>
-        to get a personal API key, then paste it below.
-      </div>
-      <div style="display:flex;gap:0">
-        <input type="text" id="fanart-api-key-input" placeholder="Paste your fanart.tv API key…"
-          style="flex:1;background:var(--bg);border:var(--bw) solid var(--border);padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);outline:none;min-width:0;">
-        <button id="fanart-save-btn"
-          style="background:var(--blue);border:var(--bw) solid var(--border);border-left:none;color:#fff;padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0;">
-          Save
-        </button>
+        Sonata fetches artist photography from <strong>fanart.tv</strong> through the bridge. Photos load automatically as you browse, and Fetch All Artist Photos below will work through every album-artist in your library.
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
         <div id="fanart-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);flex:1;min-width:200px">Not configured</div>
@@ -2691,9 +2692,7 @@ try {
 //  JELLYFIN CONNECTION
 // ══════════════════════════════════════════════
 const jellyfin = {
-  localUrl:     (localStorage.getItem('sonata_jf_url') || '').replace(/\/$/, ''),
-  tailscaleUrl: (localStorage.getItem('sonata_jf_tailscale') || '').replace(/\/$/, ''),
-  apiKey:       localStorage.getItem('sonata_jf_key')  || '',
+  bridgeUrl:    (localStorage.getItem('sonata_bridge_url') || '').replace(/\/$/, ''),
   userId:       localStorage.getItem('sonata_jf_userid') || '',
   serverUrl:    '',   // resolved at connect time
   connected:    false,
@@ -2701,26 +2700,18 @@ const jellyfin = {
 
 // Resolve which URL to use — try local first (fast), fall back to Tailscale
 async function resolveServerUrl() {
-  const local     = jellyfin.localUrl;
-  const tailscale = jellyfin.tailscaleUrl;
-  if (!local && !tailscale) throw new Error('No server URL configured');
-  if (!local) { jellyfin.serverUrl = tailscale; return; }
-  if (!tailscale) { jellyfin.serverUrl = local; return; }
-  // Try local with a short timeout
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 2000);
-    await fetch(`${local}/System/Ping`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    jellyfin.serverUrl = local;
-  } catch(e) {
-    jellyfin.serverUrl = tailscale;
+  // With the bridge in place, all Jellyfin calls go through it.
+  // serverUrl = bridgeUrl + "/jellyfin" — the bridge attaches the API key.
+  if (!jellyfin.bridgeUrl) {
+    jellyfin.serverUrl = '';
+    return;
   }
+  jellyfin.serverUrl = jellyfin.bridgeUrl + '/jellyfin';
 }
 
 function jfHeaders() {
   return {
-    'X-MediaBrowser-Token': jellyfin.apiKey,
+    // API key attached by bridge — not sent from browser
     'Content-Type': 'application/json',
   };
 }
@@ -2764,7 +2755,7 @@ async function resolveJellyfinUser() {
 async function fetchLibrary(opts = {}) {
   const silent     = opts.silent || false;
   const keepSplash = opts.keepSplash || false;  // caller will hide the splash itself
-  if (!jellyfin.localUrl && !jellyfin.tailscaleUrl || !jellyfin.apiKey) {
+  if (!jellyfin.bridgeUrl) {
     updateJfStatus('Not configured — open Settings to connect');
     return;
   }
@@ -2780,7 +2771,7 @@ async function fetchLibrary(opts = {}) {
   try {
     await resolveServerUrl();
     if (!silent) {
-      updateJfStatus(`Connecting via ${jellyfin.serverUrl === jellyfin.localUrl ? 'local network' : 'Tailscale'}…`);
+      updateJfStatus(`Connecting via Sonata Bridge…`);
     }
     await resolveJellyfinUser();
 
@@ -2801,10 +2792,8 @@ async function fetchLibrary(opts = {}) {
 
     for (const item of items) {
       const artId = item.AlbumId || item.Id;
-      const artUrl = `${jellyfin.serverUrl}/Items/${artId}/Images/Primary` +
-                     `?api_key=${encodeURIComponent(jellyfin.apiKey)}&maxHeight=300&quality=90`;
-      const streamUrl = `${jellyfin.serverUrl}/Audio/${item.Id}/stream` +
-                        `?api_key=${encodeURIComponent(jellyfin.apiKey)}&static=true`;
+      const artUrl = `${jellyfin.serverUrl}/Items/${artId}/Images/Primary?maxHeight=300&quality=90`;
+      const streamUrl = `${jellyfin.serverUrl}/Audio/${item.Id}/stream?static=true`;
 
       const artist      = (item.Artists && item.Artists[0]) || item.AlbumArtist || 'Unknown Artist';
       const albumArtist = item.AlbumArtist || artist;
@@ -3203,7 +3192,7 @@ function formatTime(s) {
 //  REFRESH / RECONNECT
 // ══════════════════════════════════════════════
 async function triggerRefresh() {
-  if (!jellyfin.serverUrl || !jellyfin.apiKey) {
+  if (!jellyfin.bridgeUrl) {
     openSettings();
     showToast('Configure Jellyfin in Settings first');
     return;
@@ -3364,13 +3353,53 @@ makeScrubHandler('fp-progress-bar');
 function setVolume(pct) {
   state.volume = Math.max(0, Math.min(1, pct));
   audio.volume = state.muted ? 0 : state.volume;
-  document.getElementById('vol-fill').style.width = (state.volume*100)+'%';
-  document.getElementById('fp-vol-fill').style.width = (state.volume*100)+'%';
+  const v = (state.volume * 100) + '%';
+  document.getElementById('vol-fill').style.width = v;
+  document.getElementById('fp-vol-fill').style.width = v;
+  // Capybara rides the slider — sits on the fill edge
+  const capy = document.getElementById('vol-capy');
+  if (capy) capy.style.left = v;
+  // Brief bob animation when the user changes the volume (skipped on initial set)
+  const bar = document.getElementById('vol-bar');
+  if (bar && setVolume._initialised) {
+    bar.classList.remove('adjusting');
+    // Force reflow so the animation re-fires on rapid changes
+    void bar.offsetWidth;
+    bar.classList.add('adjusting');
+  }
+  setVolume._initialised = true;
 }
 document.getElementById('vol-bar').onclick = (e) => {
   const rect = e.currentTarget.getBoundingClientRect();
   setVolume((e.clientX - rect.left) / rect.width);
 };
+// Drag support — click and hold, then drag the capybara left/right
+(function() {
+  const bar = document.getElementById('vol-bar');
+  let dragging = false;
+  const updateFromEvent = (e) => {
+    const rect = bar.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX);
+    setVolume((x - rect.left) / rect.width);
+  };
+  bar.addEventListener('mousedown', (e) => {
+    dragging = true;
+    updateFromEvent(e);
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (dragging) updateFromEvent(e);
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+  bar.addEventListener('touchstart', (e) => {
+    dragging = true;
+    updateFromEvent(e);
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (dragging) updateFromEvent(e);
+  }, { passive: true });
+  document.addEventListener('touchend', () => { dragging = false; });
+})();
 document.getElementById('fp-vol-bar').onclick = (e) => {
   const rect = e.currentTarget.getBoundingClientRect();
   setVolume((e.clientX - rect.left) / rect.width);
@@ -3594,7 +3623,7 @@ function renderView() {
   const content = document.getElementById('content');
 
   if (!state.tracks.length) {
-    const isConfigured = jellyfin.serverUrl && jellyfin.apiKey;
+    const isConfigured = jellyfin.bridgeUrl;
     content.innerHTML = `
       <div id="empty-state">
         <div class="empty-icon"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
@@ -3734,7 +3763,7 @@ function renderHomeView() {
 
   // No library yet → empty state
   if (!state.tracks.length) {
-    const isConfigured = (jellyfin.localUrl || jellyfin.tailscaleUrl) && jellyfin.apiKey;
+    const isConfigured = jellyfin.bridgeUrl;
     content.innerHTML = `
       <div id="empty-state">
         <div class="empty-icon"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
@@ -4327,7 +4356,7 @@ function renderArtistView() {
 
   initArtCanvases();
 
-  if (artistArt.apiKey) {
+  if (jellyfin.bridgeUrl) {
     filtered.forEach(([name]) => {
       if (photoCache[name] === undefined) fetchAndCacheArtistImage(name);
     });
@@ -6018,11 +6047,11 @@ async function processMBIDQueue() {
     if (!clean) {
       mbid = null;
     } else {
-      const url = `https://musicbrainz.org/ws/2/artist/?query=${encodeURIComponent(clean)}&limit=1&fmt=json`;
+      const url = `${jellyfin.bridgeUrl}/mbid?artist=${encodeURIComponent(clean)}`;
       const r   = await fetch(url);
       if (r.ok) {
         const data = await r.json();
-        mbid = data.artists?.[0]?.id || null;
+        mbid = data.mbid || null;
       } else if (r.status >= 500 || r.status === 429) {
         // Transient — don't cache, will retry next time
         definitive = false;
@@ -6053,9 +6082,9 @@ async function processMBIDQueue() {
 // Returns: { url, definitive } — definitive=false means transient error,
 //          should not be cached as null
 async function getFanartImage(mbid) {
-  if (!artistArt.apiKey || !mbid) return { url: null, definitive: true };
+  if (!jellyfin.bridgeUrl || !mbid) return { url: null, definitive: true };
   try {
-    const url = `https://webservice.fanart.tv/v3/music/${mbid}?api_key=${artistArt.apiKey}`;
+    const url = `${jellyfin.bridgeUrl}/fanart/${mbid}`;
     const r   = await fetch(url);
     if (r.ok) {
       const data = await r.json();
@@ -6087,7 +6116,7 @@ async function getFanartImage(mbid) {
 // Main entry point: get image URL for an artist, using cache
 // Returns: URL string, null (confirmed none), or undefined (not yet fetched)
 async function getArtistImageUrl(artistName) {
-  if (!artistArt.apiKey) return null;
+  if (!jellyfin.bridgeUrl) return null;
   const cache = loadArtistCache();
   if (cache[artistName] !== undefined) return cache[artistName]; // null or URL
 
@@ -6156,25 +6185,16 @@ function updateFanartStatus() {
   const cache   = loadArtistCache();
   const fetched = Object.keys(cache).length;
   const withImg = Object.values(cache).filter(Boolean).length;
-  if (!artistArt.apiKey) {
-    el.textContent = 'Not configured';
+  if (!jellyfin.bridgeUrl) {
+    el.textContent = 'Bridge not configured';
     el.style.color = 'var(--text3)';
   } else {
     el.textContent  = fetched
       ? `${withImg} artist photo${withImg !== 1 ? 's' : ''} cached (${fetched} artists checked)`
-      : 'Key saved — photos will load as you browse';
+      : 'Bridge ready — photos will load as you browse';
     el.style.color = 'var(--blue)';
   }
 }
-
-document.getElementById('fanart-save-btn').onclick = () => {
-  const key = document.getElementById('fanart-api-key-input').value.trim();
-  if (!key) return;
-  artistArt.apiKey = key;
-  localStorage.setItem('sonata_fanart_key', key);
-  updateFanartStatus();
-  showToast('API key saved — artist photos will load as you browse');
-};
 
 document.getElementById('fanart-clear-cache-btn').onclick = () => {
   localStorage.removeItem(FANART_CACHE_KEY);
@@ -6208,7 +6228,7 @@ document.getElementById('fanart-clear-misses-btn').onclick = () => {
 let fetchAllAbort = false;
 
 async function fetchAllArtistPhotos() {
-  if (!artistArt.apiKey) { showToast('Add your fanart.tv API key first'); return; }
+  if (!jellyfin.bridgeUrl) { showToast('Configure the Bridge URL first'); return; }
   ensureIndexes();
   if (!state.indexes) { showToast('Library not loaded yet'); return; }
 
@@ -6352,39 +6372,29 @@ async function clearLibraryCache() {
   } catch(e) {}
 }
 
-// Pre-populate fanart API key input if already saved
-if (artistArt.apiKey) {
-  const inp = document.getElementById('fanart-api-key-input');
-  if (inp) inp.value = artistArt.apiKey;
-  updateFanartStatus();
-}
+// Fanart status (no key input anymore — bridge holds the key)
+updateFanartStatus();
 
-// Pre-populate Jellyfin inputs if already saved
-(function initJellyfinUI() {
-  const localEl     = document.getElementById('jf-url-input');
-  const tailscaleEl = document.getElementById('jf-tailscale-input');
-  const keyEl       = document.getElementById('jf-key-input');
-  if (localEl     && jellyfin.localUrl)     localEl.value     = jellyfin.localUrl;
-  if (tailscaleEl && jellyfin.tailscaleUrl) tailscaleEl.value = jellyfin.tailscaleUrl;
-  if (keyEl       && jellyfin.apiKey)       keyEl.value       = jellyfin.apiKey;
+// Pre-populate the Bridge URL input if already saved
+(function initBridgeUI() {
+  const inp = document.getElementById('bridge-url-input');
+  if (inp && jellyfin.bridgeUrl) inp.value = jellyfin.bridgeUrl;
 })();
 
-document.getElementById('jf-connect-btn').onclick = async () => {
-  const localEl     = document.getElementById('jf-url-input');
-  const tailscaleEl = document.getElementById('jf-tailscale-input');
-  const keyEl       = document.getElementById('jf-key-input');
-  const local       = (localEl.value     || '').trim().replace(/\/$/, '');
-  const tailscale   = (tailscaleEl.value || '').trim().replace(/\/$/, '');
-  const key         = (keyEl.value       || '').trim();
-  if ((!local && !tailscale) || !key) { showToast('Enter at least one server URL and API key'); return; }
-  jellyfin.localUrl     = local;
-  jellyfin.tailscaleUrl = tailscale;
-  jellyfin.apiKey       = key;
-  jellyfin.userId       = '';
-  localStorage.setItem('sonata_jf_url',       local);
-  localStorage.setItem('sonata_jf_tailscale', tailscale);
-  localStorage.setItem('sonata_jf_key',       key);
+document.getElementById('bridge-connect-btn').onclick = async () => {
+  const inp = document.getElementById('bridge-url-input');
+  const url = (inp.value || '').trim().replace(/\/$/, '');
+  if (!url) { showToast('Enter the bridge URL'); return; }
+  if (!/^https?:\/\//.test(url)) { showToast('Bridge URL must start with https://'); return; }
+  jellyfin.bridgeUrl = url;
+  jellyfin.userId    = '';
+  localStorage.setItem('sonata_bridge_url', url);
   localStorage.removeItem('sonata_jf_userid');
+  // Clear legacy keys in case they linger from older versions
+  localStorage.removeItem('sonata_jf_url');
+  localStorage.removeItem('sonata_jf_tailscale');
+  localStorage.removeItem('sonata_jf_key');
+  localStorage.removeItem('sonata_fanart_key');
   updateJfStatus('Connecting…');
   closeSettings();
   await fetchLibrary();
@@ -6465,7 +6475,7 @@ openSettings = function() {
   renderPlaylists();
   renderView();
 
-  const hasServer = (jellyfin.localUrl || jellyfin.tailscaleUrl) && jellyfin.apiKey;
+  const hasServer = jellyfin.bridgeUrl;
   if (hasServer) {
     splashText.textContent = 'reading library…';
     const fromCache = await loadCachedLibrary();
