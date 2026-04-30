@@ -2778,7 +2778,7 @@ async function fetchLibrary(opts = {}) {
     document.getElementById('loading-text').textContent = 'Loading library…';
 
     const fields = 'AlbumArtist,Artists,Genres,ParentId,IndexNumber,RunTimeTicks,AlbumId,AlbumArtistIds,ProductionYear';
-    const PAGE_SIZE = 5000;
+    const PAGE_SIZE = 1000;
     let startIndex = 0;
     let items = [];
     let totalCount = null;
