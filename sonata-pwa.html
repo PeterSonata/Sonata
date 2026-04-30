@@ -2778,13 +2778,24 @@ async function fetchLibrary(opts = {}) {
     document.getElementById('loading-text').textContent = 'Loading library…';
 
     const fields = 'AlbumArtist,Artists,Genres,ParentId,IndexNumber,RunTimeTicks,AlbumId,AlbumArtistIds,ProductionYear';
-    const data = await jfGet(
-      `/Users/${jellyfin.userId}/Items?IncludeItemTypes=Audio&Recursive=true` +
-      `&Fields=${fields}&SortBy=AlbumArtist,Album,IndexNumber,SortName` +
-      `&SortOrder=Ascending&Limit=100000`
-    );
+    const PAGE_SIZE = 5000;
+    let startIndex = 0;
+    let items = [];
+    let totalCount = null;
 
-    const items = data.Items || [];
+    while (true) {
+      const data = await jfGet(
+        `/Users/${jellyfin.userId}/Items?IncludeItemTypes=Audio&Recursive=true` +
+        `&Fields=${fields}&SortBy=AlbumArtist,Album,IndexNumber,SortName` +
+        `&SortOrder=Ascending&Limit=${PAGE_SIZE}&StartIndex=${startIndex}`
+      );
+      const page = data.Items || [];
+      if (totalCount === null) totalCount = data.TotalRecordCount || 0;
+      items = items.concat(page);
+      document.getElementById('loading-text').textContent = `Loading library… ${items.length.toLocaleString()} / ${totalCount.toLocaleString()}`;
+      if (page.length < PAGE_SIZE) break;
+      startIndex += PAGE_SIZE;
+    }
     document.getElementById('loading-text').textContent = `Processing ${items.length} tracks…`;
 
     // Remove previously loaded Jellyfin tracks (keep OPFS-saved ones)
