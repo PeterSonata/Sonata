@@ -1,0 +1,13 @@
+﻿# Patcher backup files
+sonata-pwa.backup-*.html
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Editor backup files
+*.swp
+*~
+
+# Stray archives
+*.zip
