@@ -3806,7 +3806,7 @@ function renderHomeView() {
   const cards = picks.map(info => {
     const isSel = selected.has(info.album);
     return `
-    <div class="grid-card home-album-card${inSelect ? ' qf-selecting' : ''}${isSel ? ' qf-selected' : ''}" data-album="${esc(info.album)}" data-type="${info._type || 'album'}">
+    <div class="grid-card home-album-card${inSelect ? ' qf-selecting' : ''}${isSel ? ' qf-selected' : ''}" data-album="${esc(info.album)}" data-type="${info._type || 'album'}" data-artist="${esc(info.artist)}">
       <div class="qf-tick"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
@@ -3884,7 +3884,11 @@ function renderHomeView() {
       // Tweak 8: mark the drill so back returns to home.
       state.drillOrigin = 'home';
       state.currentView = type === 'compilation' ? 'compilations' : (type === 'djmix' ? 'djmixes' : 'albums');
-      state.drillTarget = { type: type === 'compilation' ? 'compilation' : (type === 'djmix' ? 'djmix' : 'album'), value: album };
+      // Round 1 follow-up: pass artist through so the album page can show and link it.
+      const drillType = type === 'compilation' ? 'compilation' : (type === 'djmix' ? 'djmix' : 'album');
+      state.drillTarget = drillType === 'album'
+        ? { type: 'album', value: album, artist: card.dataset.artist }
+        : { type: drillType, value: album };
       renderView();
     };
   });
@@ -4626,7 +4630,7 @@ function renderAlbumView() {
     const albumTracks = tracksByAlbum ? (tracksByAlbum[info.album] || []) : getAlbumTracks(info.album);
     const allSaved = albumTracks.length > 0 && albumTracks.every(t => state.savedIds.has(t.id));
     return `
-    <div class="grid-card" data-album="${esc(info.album)}">
+    <div class="grid-card" data-album="${esc(info.album)}" data-artist="${esc(info.artist)}">
       <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
       <div class="card-label">${esc(info.album)}</div>
       <div class="card-sublabel" style="display:flex;align-items:center;justify-content:space-between">
@@ -4646,7 +4650,7 @@ function renderAlbumView() {
 
   initArtCanvases();
   content.querySelectorAll('.grid-card').forEach(card => {
-    card.onclick = () => { state.drillTarget = { type: 'album', value: card.dataset.album }; renderView(); };
+    card.onclick = () => { state.drillTarget = { type: 'album', value: card.dataset.album, artist: card.dataset.artist }; renderView(); };
   });
 
   content.querySelectorAll('.card-dl-btn').forEach(btn => {
