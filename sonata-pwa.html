@@ -3229,6 +3229,104 @@ async function triggerRefresh() {
 const audio = document.getElementById('audio');
 audio.volume = state.volume;
 
+// === iOS background-audio keepalive (silent loop trick) ===
+//
+// iOS releases the audio session within seconds of <audio> going silent.
+// Once released, only a foreground user gesture can re-acquire it - so
+// the lock-screen play button stops working after a pause, and tracks
+// don't advance when one ends. To prevent this we never let audio fall
+// silent: when "pausing" or transitioning between tracks, we swap to a
+// tiny silent WAV on loop. iOS keeps the session alive, and lock-screen
+// controls keep working.
+
+function _makeSilentWav() {
+  // 1 second of 8-bit unsigned mono silence at 8 kHz. About 8 KB.
+  const sampleRate = 8000;
+  const numSamples = sampleRate;
+  const buf = new ArrayBuffer(44 + numSamples);
+  const v = new DataView(buf);
+  // RIFF header
+  [0x52,0x49,0x46,0x46].forEach((b,i) => v.setUint8(i, b));        // "RIFF"
+  v.setUint32(4, 36 + numSamples, true);
+  [0x57,0x41,0x56,0x45].forEach((b,i) => v.setUint8(8+i, b));      // "WAVE"
+  [0x66,0x6d,0x74,0x20].forEach((b,i) => v.setUint8(12+i, b));     // "fmt "
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);                                        // PCM
+  v.setUint16(22, 1, true);                                        // mono
+  v.setUint32(24, sampleRate, true);
+  v.setUint32(28, sampleRate, true);
+  v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true);                                        // 8-bit
+  [0x64,0x61,0x74,0x61].forEach((b,i) => v.setUint8(36+i, b));     // "data"
+  v.setUint32(40, numSamples, true);
+  // 8-bit unsigned PCM uses 0x80 as silence (midpoint)
+  for (let i = 0; i < numSamples; i++) v.setUint8(44+i, 0x80);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
+const SILENT_LOOP_URL = _makeSilentWav();
+let _silentMode = false;
+let _savedSrc = null;
+let _savedTime = 0;
+
+function isSilent() { return _silentMode; }
+
+// Swap to silent loop. Used for pause and as a bridge during track
+// transitions. Audio session stays alive because audio is technically
+// still playing (silently).
+function pausePlayback() {
+  if (!state.currentTrack || _silentMode) return;
+  _savedSrc = audio.src;
+  _savedTime = audio.currentTime;
+  _silentMode = true;
+  audio.loop = true;
+  audio.src = SILENT_LOOP_URL;
+  audio.play().catch(() => {});
+  // The src swap won't fire a clean onpause for the real track, so
+  // update state directly.
+  state.playing = false;
+  updateAllPlayerUIs();
+  renderPlayingState();
+  updateMediaSession();
+}
+
+function resumePlayback() {
+  if (!state.currentTrack) return;
+  if (_silentMode && _savedSrc) {
+    const restoreTime = _savedTime;
+    const restoreSrc = _savedSrc;
+    _silentMode = false;
+    _savedSrc = null;
+    audio.loop = false;
+    audio.src = restoreSrc;
+    // Restore position once the real track's metadata loads.
+    audio.addEventListener('loadedmetadata', () => {
+      try { audio.currentTime = restoreTime; } catch (e) {}
+    }, { once: true });
+  }
+  audio.play().catch(() => {});
+  // onplay fires when real audio starts; it will update UI and
+  // mediaSession via the existing audio.onplay handler.
+}
+
+// Bridge through silent loop while loading the next track. Used by
+// onended so iOS doesn't release the session in the gap between the
+// finishing track and the next one starting.
+function _bridgeAndAdvance() {
+  _silentMode = true;
+  audio.loop = true;
+  audio.src = SILENT_LOOP_URL;
+  audio.play().catch(() => {});
+  // Give the silent loop a brief moment to actually start producing
+  // sound before we change src to the next track.
+  setTimeout(() => {
+    _silentMode = false;
+    audio.loop = false;
+    playCurrentQueue();
+    renderView();
+  }, 120);
+}
+
 function playTracksAt(tracks, idx) {
   state._queueTracks = tracks;
   if (state.shuffle) {
@@ -3249,6 +3347,8 @@ function playTracksAt(tracks, idx) {
 
 function playCurrentQueue() {
   if (state.queuePos < 0 || state.queuePos >= state.queue.length) return;
+  // Defensive: any new-track load clears silent-loop state.
+  _silentMode = false; _savedSrc = null; audio.loop = false;
   const t = state._queueTracks[state.queue[state.queuePos]];
   if (!t) return;
   state.currentTrack = t;
@@ -3265,6 +3365,7 @@ function playCurrentQueue() {
 }
 
 audio.ontimeupdate = () => {
+  if (_silentMode) return;   // ignore ticks from silent loop
   if (!audio.duration) return;
   const pct = (audio.currentTime / audio.duration) * 100;
   const w = pct + '%';
@@ -3282,18 +3383,26 @@ audio.onloadedmetadata = () => {
 };
 
 audio.onended = () => {
+  if (_silentMode) return;   // silent loop has loop=true so this shouldn't fire, but guard anyway
   if (state.repeat === 'one') { audio.play(); return; }
   state.queuePos++;
   if (state.queuePos >= state.queue.length) {
     if (state.repeat === 'all') state.queuePos = 0;
     else { state.playing = false; updateAllPlayerUIs(); return; }
   }
-  playCurrentQueue();
-  renderView();
+  // Bridge through silent loop so iOS keeps the audio session
+  // alive while the next track loads.
+  _bridgeAndAdvance();
 };
 
-audio.onplay  = () => { state.playing = true;  updateAllPlayerUIs(); renderPlayingState(); updateMediaSession(); };
-audio.onpause = () => { state.playing = false; updateAllPlayerUIs(); renderPlayingState(); updateMediaSession(); };
+audio.onplay  = () => {
+  if (_silentMode) return;  // silent loop, not a real play
+  state.playing = true;  updateAllPlayerUIs(); renderPlayingState(); updateMediaSession();
+};
+audio.onpause = () => {
+  if (_silentMode) return;  // we faked a pause via silent loop
+  state.playing = false; updateAllPlayerUIs(); renderPlayingState(); updateMediaSession();
+};
 
 // ── Controls: Desktop ──
 function prevTrack() {
@@ -3307,7 +3416,7 @@ function nextTrack() {
 }
 function togglePlay() {
   if (!state.currentTrack) return;
-  state.playing ? audio.pause() : audio.play();
+  state.playing ? pausePlayback() : resumePlayback();
 }
 
 document.getElementById('play-btn').onclick   = togglePlay;
@@ -3555,8 +3664,8 @@ function updateMediaSession() {
     album:  t.album,
   });
 
-  navigator.mediaSession.setActionHandler('play',         () => audio.play());
-  navigator.mediaSession.setActionHandler('pause',        () => audio.pause());
+  navigator.mediaSession.setActionHandler('play',         () => resumePlayback());
+  navigator.mediaSession.setActionHandler('pause',        () => pausePlayback());
   navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
   navigator.mediaSession.setActionHandler('nexttrack',    nextTrack);
   navigator.mediaSession.setActionHandler('seekto', (d) => { if (d.seekTime !== undefined) audio.currentTime = d.seekTime; });
@@ -3606,13 +3715,23 @@ document.querySelectorAll('.bnav-item').forEach(el => {
 
 document.getElementById('new-playlist-btn').onclick = () => showModal('new');
 
-// Search (desktop)
-document.getElementById('search').oninput = (e) => {
-  state.searchQ = e.target.value.toLowerCase().trim();
-  state.currentView = state.searchQ ? 'search' : 'home';
-  state.drillTarget = null;
-  renderView();
-};
+// Search (debounced, shared by desktop and mobile inputs)
+// Round 1 addendum: avoid running the full search on every keystroke,
+// which was blocking the main thread for seconds at a time on iPhone.
+let _searchTimer = null;
+function _onSearchInput(value) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    const q = value.toLowerCase().trim();
+    // Single-character queries match too broadly to be useful and slow
+    // the app right down. Wait until we have at least two characters.
+    state.searchQ = q.length >= 2 ? q : '';
+    state.currentView = state.searchQ ? 'search' : 'home';
+    state.drillTarget = null;
+    renderView();
+  }, 150);
+}
+document.getElementById('search').oninput = (e) => _onSearchInput(e.target.value);
 
 // Search (mobile)
 document.getElementById('mob-search-toggle').onclick = () => {
@@ -3628,12 +3747,7 @@ document.getElementById('mob-search-toggle').onclick = () => {
   }
 };
 
-document.getElementById('mob-search').oninput = (e) => {
-  state.searchQ = e.target.value.toLowerCase().trim();
-  state.currentView = state.searchQ ? 'search' : 'home';
-  state.drillTarget = null;
-  renderView();
-};
+document.getElementById('mob-search').oninput = (e) => _onSearchInput(e.target.value);
 
 // ══════════════════════════════════════════════
 //  RENDER
@@ -4509,14 +4623,20 @@ function renderSearchView() {
   }
   for (const v of Object.values(artistMap)) v.albumCount = v.albums.size;
 
-  const matchedArtists = Object.entries(artistMap)
+  // Round 1 addendum: cap rendered artist tiles to keep the search
+  // view snappy. allMatchedArtists keeps the full count for display.
+  const allMatchedArtists = Object.entries(artistMap)
     .filter(([name]) => name.toLowerCase().includes(q))
     .sort((a,b) => a[0].localeCompare(b[0]));
+  const matchedArtists = allMatchedArtists.slice(0, 30);
 
   // Matching tracks (title or album, not already covered by artist match)
-  const matchedTracks = state.tracks.filter(t =>
+  // Round 1 addendum: cap rendered tracks. allMatchedTracks keeps the
+  // full count for the section label.
+  const allMatchedTracks = state.tracks.filter(t =>
     t.title.toLowerCase().includes(q) || t.album.toLowerCase().includes(q)
   );
+  const matchedTracks = allMatchedTracks.slice(0, 100);
 
   const photoCache = loadArtistCache();
 
@@ -4537,14 +4657,20 @@ function renderSearchView() {
         <div class="card-sublabel">${info.albumCount} album${info.albumCount !== 1 ? 's' : ''}</div>
       </div>`;
     }).join('');
+    const _artistTrunc = allMatchedArtists.length > matchedArtists.length
+      ? ` <span style="font-weight:400;opacity:0.6">(showing ${matchedArtists.length} of ${allMatchedArtists.length})</span>`
+      : '';
     html += `
-      <div class="search-section-label">Artists</div>
+      <div class="search-section-label">Artists${_artistTrunc}</div>
       <div class="grid-view" style="border-top:none">${cards}</div>`;
   }
 
   // Track results section
   if (matchedTracks.length) {
-    html += `<div class="search-section-label" style="margin-top:0">Tracks &amp; Albums <span style="font-weight:400;opacity:0.6">(${matchedTracks.length})</span></div>`;
+    const _tracksLabel = allMatchedTracks.length > matchedTracks.length
+      ? `${matchedTracks.length} of ${allMatchedTracks.length.toLocaleString()}`
+      : `${matchedTracks.length}`;
+    html += `<div class="search-section-label" style="margin-top:0">Tracks &amp; Albums <span style="font-weight:400;opacity:0.6">(${_tracksLabel})</span></div>`;
     const rows = matchedTracks.map((t, i) => {
       const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
       const playing   = isPlaying && state.playing;
