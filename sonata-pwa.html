@@ -4226,10 +4226,16 @@ function renderTrackList(tracks, backFn, backLabel) {
         <div class="album-hero-title">${esc(title)}</div>
         ${state.drillTarget.artist ? `<div class="album-hero-artist clickable-artist" data-artist="${esc(state.drillTarget.artist)}">${esc(state.drillTarget.artist)}</div>` : ''}
         <div class="album-hero-meta">${year ? year + ' · ' : ''}${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
-        <button class="play-all-btn" id="play-all-btn">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Play
-        </button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="play-all-btn" id="play-all-btn">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Play
+          </button>
+          ${mob ? `<button class="save-collection-btn${allSaved ? ' all-saved' : ''}" id="save-all-btn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            ${allSaved ? 'All Saved' : 'Save All'}
+          </button>` : ''}
+        </div>
       </div>
     </div>`;
   }
@@ -4828,6 +4834,12 @@ function renderCompilationsView() {
 // Click a mix → plays immediately, no track list shown
 
 function renderDJMixesView() {
+  // If drilling into a specific DJ mix, render the track listing
+  // (matches how renderCompilationsView and renderAlbumView behave).
+  if (state.drillTarget && state.drillTarget.type === 'djmix') {
+    renderTrackList(getVisibleTracks());
+    return;
+  }
   const content = document.getElementById('content');
   ensureIndexes();
 
