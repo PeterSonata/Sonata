@@ -2750,7 +2750,8 @@ async function jfDelete(path) {
 
 // Resolve the Jellyfin userId from the API key if not already cached
 async function resolveJellyfinUser() {
-  if (jellyfin.userId) return true;
+  // Always re-query to catch stale cached userIds (e.g. when the
+  // sonata-bridge user is added after a device first connected)
   const data = await jfGet('/Users');
   if (!data || !data.length) throw new Error('No users found');
   // Prefer the dedicated sonata-bridge user; fall back to first user
