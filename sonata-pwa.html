@@ -2753,7 +2753,9 @@ async function resolveJellyfinUser() {
   if (jellyfin.userId) return true;
   const data = await jfGet('/Users');
   if (!data || !data.length) throw new Error('No users found');
-  jellyfin.userId = data[0].Id;
+  // Prefer the dedicated sonata-bridge user; fall back to first user
+  const bridgeUser = data.find(u => u.Name === 'sonata-bridge');
+  jellyfin.userId = bridgeUser ? bridgeUser.Id : data[0].Id;
   localStorage.setItem('sonata_jf_userid', jellyfin.userId);
   return true;
 }
