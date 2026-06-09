@@ -48,6 +48,7 @@ app.use(require('./routes/fanart'));
 app.use(require('./routes/mbid'));
 app.use(require('./routes/jobs'));
 app.use(require('./routes/playlists'));
+app.use(require('./routes/photos'));
 
 // ─── Start ────────────────────────────────────────────────────────────────
 app.listen(config.bridgePort, async () => {
@@ -55,7 +56,7 @@ app.listen(config.bridgePort, async () => {
   console.log(`  Jellyfin:  ${config.jellyfinUrl}`);
   console.log(`  fanart.tv: ${config.fanartApiKey ? 'configured' : 'NOT configured'}`);
   console.log(`  Auth key:  ${config.sonataKey ? 'configured' : 'NOT configured (writable routes disabled)'}`);
-  console.log(`  Endpoints: /health, /stats, /jellyfin/*, /fanart/:mbid, /mbid, /jobs`);
+  console.log(`  Endpoints: /health, /stats, /jellyfin/*, /fanart/:mbid, /mbid, /jobs, /playlists, /photos`);
 
   await worker.resetStuckJobs();
   worker.start({ intervalMs: 2000 });
