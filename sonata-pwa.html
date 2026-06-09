@@ -2496,6 +2496,14 @@ body {
   <div id="settings-body">
     <div class="settings-section-label">Appearance</div>
     <div id="skin-grid"></div>
+    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Quick refresh</div>
+    <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
+      <button id="quick-refresh-btn"
+        style="background:var(--surface2);border:var(--bw) solid var(--border);color:var(--text);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;width:100%;">
+        Quick Refresh
+      </button>
+      <div id="quick-refresh-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);letter-spacing:0.06em;line-height:1.55;margin-top:10px">Asks Jellyfin to scan the NAS for newly added tracks. Runs in the background and starts instantly.</div>
+    </div>
 
     <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Connection</div>
     <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
@@ -2521,7 +2529,7 @@ body {
       <div id="library-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);letter-spacing:0.06em;margin-bottom:14px">No library loaded yet</div>
       <button id="library-refresh-btn"
         style="background:var(--surface2);border:var(--bw) solid var(--border);color:var(--text);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;width:100%;">
-        Refresh Library
+        Full Re-fetch
       </button>
       <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-top:10px">
         Re-fetches every track from Jellyfin. With your library size this takes around 20 minutes and Sonata is unusable until it finishes. New tracks added on the NAS appear automatically via the silent background sync, so manual refresh is rarely needed.
@@ -6627,6 +6635,29 @@ function updateLibraryStatus() {
   const when = formatLastRefresh(last);
   el.textContent = `${trackCount.toLocaleString()} tracks · ${albumCount.toLocaleString()} albums · last refreshed ${when}`;
 }
+
+document.getElementById('quick-refresh-btn').onclick = async () => {
+  const btn = document.getElementById('quick-refresh-btn');
+  const status = document.getElementById('quick-refresh-status');
+  if (!jellyfin.serverUrl) {
+    if (status) status.textContent = 'Connect to the bridge first (see Connection below).';
+    return;
+  }
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Requesting…';
+  try {
+    // POST /jellyfin/Library/Refresh through the bridge proxy; the bridge
+    // attaches the Jellyfin API key. Returns immediately, scan runs server-side.
+    await jfPost('/Library/Refresh', {});
+    if (status) status.textContent = 'Scan started. Jellyfin is indexing the NAS in the background; new tracks appear once it finishes.';
+  } catch (e) {
+    if (status) status.textContent = 'Could not start scan: ' + e.message;
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+};
 
 document.getElementById('library-refresh-btn').onclick = () => {
   const ok = window.confirm(
