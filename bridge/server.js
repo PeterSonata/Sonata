@@ -48,6 +48,7 @@ app.use(require('./routes/fanart'));
 app.use(require('./routes/mbid'));
 app.use(require('./routes/jobs'));
 app.use(require('./routes/playlists'));
+app.use(require('./routes/sonos'));
 app.use(require('./routes/photos'));
 
 // ─── Start ────────────────────────────────────────────────────────────────
