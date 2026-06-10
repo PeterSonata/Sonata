@@ -6282,7 +6282,7 @@ function openCacheDB() {
   });
 }
 
-async function saveCachedLibrary(tracks) {
+async function saveCachedLibrary(tracks, version) {
   try {
     const db = await openCacheDB();
     // Clear first
@@ -6311,7 +6311,7 @@ async function saveCachedLibrary(tracks) {
     }
     db.close();
     localStorage.setItem(CACHE_META_KEY, JSON.stringify({
-      ts: Date.now(), count: toSave.length,
+      ts: Date.now(), count: toSave.length, version: version || null,
     }));
   } catch(e) {
     console.warn('Cache write failed:', e);
@@ -6357,6 +6357,101 @@ async function clearLibraryCache() {
     localStorage.removeItem(CACHE_META_KEY);
   } catch(e) {}
 }
+
+// ── Bridge library cache (slim pull + version check) ───────────────────────────
+function adoptSlimTrack(t) {
+  const id          = t.id || t.Id;
+  const title       = t.title || t.Name || 'Unknown Title';
+  const artist      = t.artist || (t.Artists && t.Artists[0]) || t.AlbumArtist || 'Unknown Artist';
+  const albumArtist = t.albumArtist || t.AlbumArtist || artist;
+  const rawAlbum    = t.album || t.Album || '';
+  const album       = rawAlbum || 'Unknown Album';
+  const genre       = t.genre || (t.Genres && t.Genres[0]) || '';
+  const trackNumber = (t.trackNumber != null ? t.trackNumber : t.IndexNumber) || 0;
+  const duration    = (t.duration != null) ? t.duration
+                    : (t.RunTimeTicks ? Math.round(t.RunTimeTicks / 10000000) : 0);
+  const year        = (t.year != null ? t.year : t.ProductionYear) || 0;
+  const artId       = t.albumId || t.AlbumId || id;
+  const artUrl      = `${jellyfin.serverUrl}/Items/${artId}/Images/Primary?maxHeight=300&quality=90`;
+  const streamUrl   = `${jellyfin.serverUrl}/Audio/${id}/stream?static=true`;
+  return {
+    id, jellyfinId: id, title, artist, albumArtist, album, genre,
+    trackNumber, duration, year,
+    artSeed: rawAlbum || albumArtist || artist || title,
+    artUrl, streamUrl, picture: null, file: null, saved: false,
+  };
+}
+
+// Returns true if the library is now in hand from the bridge, false otherwise.
+// On false the caller decides what to do (first run falls back to fetchLibrary;
+// the background path simply keeps the cached library).
+async function syncLibraryFromBridge(opts = {}) {
+  const firstRun = !!opts.firstRun;
+  if (!jellyfin.bridgeUrl) return false;
+  const base = jellyfin.bridgeUrl;
+  try {
+    let bridgeVersion = null;
+
+    // Warm path: cheap version probe first, bail out early if unchanged.
+    if (!firstRun) {
+      const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || 'null');
+      const vr = await fetch(`${base}/library/version`);
+      if (!vr.ok) throw new Error(`version ${vr.status}`);
+      const vinfo = await vr.json();
+      bridgeVersion = vinfo.version || null;
+      if (meta && meta.version && bridgeVersion && meta.version === bridgeVersion) {
+        return true; // already current, nothing to pull
+      }
+    }
+
+    // Pull the whole slim library in one request.
+    const lr = await fetch(`${base}/library`);
+    if (!lr.ok) throw new Error(`library ${lr.status}`);
+    const payload = await lr.json();
+    const slim = Array.isArray(payload)
+               ? payload
+               : (payload.tracks || payload.library || payload.items || []);
+    if (!slim.length) throw new Error('empty library payload');
+
+    // serverUrl is needed to build art/stream URLs (cheap, no network).
+    await resolveServerUrl();
+    if (firstRun) { try { await resolveJellyfinUser(); } catch (e) {} }
+
+    // First run skipped the version probe above; fetch it now for the meta so
+    // the next boot can short-circuit.
+    if (!bridgeVersion) {
+      try {
+        const vr2 = await fetch(`${base}/library/version`);
+        if (vr2.ok) bridgeVersion = (await vr2.json()).version || null;
+      } catch (e) {}
+    }
+
+    const adopted = slim.map(adoptSlimTrack);
+    const saved   = state.tracks.filter(t => t.saved);
+    state.tracks  = [...saved, ...adopted];
+
+    // Re-link any OPFS-saved tracks to fresh art/stream URLs.
+    for (const s of saved) {
+      const jf = adopted.find(t => t.id === s.id);
+      if (jf) { s.artUrl = jf.artUrl; s.streamUrl = jf.streamUrl; }
+    }
+
+    jellyfin.connected = true;
+    invalidateIndexes();
+    buildIndexes();
+    localStorage.setItem('sonata_last_refresh', Date.now().toString());
+    await saveCachedLibrary(adopted, bridgeVersion);
+    updateJfStatus(`Library · ${adopted.length.toLocaleString()} tracks`);
+    if (firstRun) { try { await fetchJellyfinPlaylists(); } catch (e) {} }
+    renderPlaylists();
+    renderView();
+    return true;
+  } catch (e) {
+    console.warn('Bridge library sync failed:', e);
+    return false;
+  }
+}
+
 
 
 // Pre-populate the Bridge URL input if already saved
@@ -6487,21 +6582,20 @@ openSettings = function() {
     splashText.textContent = 'reading library…';
     const fromCache = await loadCachedLibrary();
     if (fromCache) {
-      // Library from cache — render immediately, hide splash (with floor),
-      // then sync everything silently in background
+      // Library from cache: render immediately, hide splash (with floor),
+      // then version-check against the bridge in the background and only
+      // re-pull the whole library if the bridge version has changed.
       renderPlaylists();
       renderView();
       await hideSplash();
-      setTimeout(async () => {
-        try {
-          await fetchLibrary({ silent: true });
-        } catch(e) { /* keep cached version and localStorage playlists */ }
-      }, 2000);
+      setTimeout(() => { syncLibraryFromBridge({ firstRun: false }); }, 2000);
     } else {
-      // No cache — full load (fetchLibrary keeps the splash up via its own
-      // loading-text updates; we hand off without lowering the floor early)
+      // No cache, first run: pull the whole library from the bridge in one
+      // slim request, falling back to the per-page Jellyfin walk only if the
+      // bridge library endpoint is unavailable.
       splashText.textContent = 'first run, fetching everything…';
-      await fetchLibrary({ keepSplash: true });
+      const gotFromBridge = await syncLibraryFromBridge({ firstRun: true });
+      if (!gotFromBridge) await fetchLibrary({ keepSplash: true });
       renderPlaylists();
       renderView();
       await hideSplash();
