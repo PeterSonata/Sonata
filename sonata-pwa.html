@@ -3386,15 +3386,23 @@ audio.onpause = () => {
 
 // ── Controls: Desktop ──
 function prevTrack() {
+  if (isCasting()) { sonosControl('/sonos/previous'); return; }
   if (audio.currentTime > 3) { audio.currentTime = 0; return; }
   state.queuePos = Math.max(0, state.queuePos - 1);
   playCurrentQueue(); renderView();
 }
 function nextTrack() {
+  if (isCasting()) { sonosControl('/sonos/next'); return; }
   state.queuePos = Math.min(state.queue.length-1, state.queuePos+1);
   if (state.queuePos < state.queue.length) { playCurrentQueue(); renderView(); }
 }
 function togglePlay() {
+  if (isCasting()) {
+    if (speaker.sonosPlaying) { sonosControl('/sonos/pause'); speaker.sonosPlaying = false; }
+    else { sonosControl('/sonos/resume'); speaker.sonosPlaying = true; }
+    updateAllPlayerUIs();
+    return;
+  }
   if (!state.currentTrack) return;
   state.playing ? pausePlayback() : resumePlayback();
 }
@@ -5558,8 +5566,13 @@ async function discoverSonosRooms() {
       const ok = await resolveNasURL();
       if (!ok) throw new Error('NAS not reachable');
     }
-    const data = await bridgeGet('/rooms');
-    speaker.sonosRooms = data.rooms || [];
+    const data = await bridgeGet('/sonos');
+    // Bridge returns { players:[{host,name}] }. Map to the room shape
+    // the rest of the cast UI expects: id holds the host (IP).
+    speaker.sonosRooms = (data.players || []).map(p => ({
+      id:   p.host,
+      name: p.name || p.host,
+    }));
     renderSonosRooms();
   } catch(e) {
     if (list) list.innerHTML = `<div class="speaker-row" style="cursor:default">
@@ -5605,23 +5618,52 @@ function renderSonosRooms() {
   });
 }
 
+// ── Cast helpers ───────────────────────────────────────────────
+/* sonata-sonos-client-reconciled */
+function isCasting() { return !!(speaker && speaker.activeRoom); }
+
+// Item ids for the current queue, from the current position onward.
+// Falls back to just the current track if the queue isn't populated.
+function sonosQueueIds() {
+  try {
+    if (Array.isArray(state.queue) && state._queueTracks && state.queue.length) {
+      return state.queue
+        .slice(state.queuePos)
+        .map(i => state._queueTracks[i])
+        .filter(Boolean)
+        .map(t => t.jellyfinId || t.id)
+        .filter(Boolean);
+    }
+  } catch (e) {}
+  const t = state.currentTrack;
+  const id = t && (t.jellyfinId || t.id);
+  return id ? [id] : [];
+}
+
+async function sonosControl(path) {
+  if (!isCasting()) return;
+  try { await bridgePost(path, { host: speaker.activeRoom.id }); }
+  catch (e) { showToast('Sonos control failed'); }
+}
+
 async function playSonos(room) {
   if (!state.currentTrack) { showToast('No track loaded'); return; }
   const connected = await ensureConnected();
   if (!connected) { showToast('Cannot reach NAS'); return; }
 
   speaker.activeRoom = room;
+  // Stop local audio (use the real element, not pausePlayback, so we
+  // don't kick off the silent-loop machinery while casting).
   audio.pause();
 
-  const streamUrl = state.currentTrack.streamUrl || null;
+  // Build the list of Jellyfin item ids from the current queue, from
+  // the current position onward, so the speaker queue mirrors what
+  // would have played locally. The bridge turns each id into a LAN
+  // .mp3 stream URL itself.
+  const ids = sonosQueueIds();
 
   try {
-    await bridgePost('/play', {
-      roomId:    room.id,
-      streamUrl, // Jellyfin direct stream URL — Sonos pulls audio itself
-      title:     state.currentTrack.title,
-      artist:    state.currentTrack.artist,
-    });
+    await bridgePost('/sonos/play', { host: room.id, ids });
     speaker.sonosPlaying = true;
     updateCastBtns();
     showToast(`Playing on ${room.name}`);
@@ -5635,7 +5677,7 @@ async function playSonos(room) {
 
 async function stopSonos() {
   if (!speaker.activeRoom) return;
-  try { await bridgePost('/stop', { roomId: speaker.activeRoom.id }); } catch(e) {}
+  try { await bridgePost('/sonos/pause', { host: speaker.activeRoom.id }); } catch(e) {}
   speaker.activeRoom   = null;
   speaker.sonosPlaying = false;
   updateCastBtns();
