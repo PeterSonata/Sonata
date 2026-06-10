@@ -3274,7 +3274,14 @@ function isSilent() { return _silentMode; }
 // transitions. Audio session stays alive because audio is technically
 // still playing (silently).
 function pausePlayback() {
-  if (!state.currentTrack || _silentMode) return;
+  if (!state.currentTrack) return;
+  // sonata-desktop-real-pause: desktop browsers keep the media session alive across a
+  // real pause, so pause the element for real. That keeps the OS overlay's
+  // play/pause state honest, which is what lets its resume button work. The
+  // silent-loop keepalive below is only needed on iOS, where the audio
+  // session is dropped the moment audio goes silent.
+  if (!isIOS) { audio.pause(); return; }
+  if (_silentMode) return;
   _savedSrc = audio.src;
   _savedTime = audio.currentTime;
   _silentMode = true;
@@ -3291,6 +3298,7 @@ function pausePlayback() {
 
 function resumePlayback() {
   if (!state.currentTrack) return;
+  if (!isIOS) { audio.play().catch(() => {}); return; }
   if (_silentMode && _savedSrc) {
     const restoreTime = _savedTime;
     const restoreSrc = _savedSrc;
