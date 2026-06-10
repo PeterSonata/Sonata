@@ -365,32 +365,7 @@ body {
   border: var(--bw) solid var(--border);
   position: relative;
 }
-.card-art canvas { width: 100%; height: 100%; display: block; }
-.card-art .artist-photo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  opacity: 0;
-  transition: opacity 0.4s;
-}
-.card-art .artist-photo.loaded { opacity: 1; }
-.card-art .artist-photo-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text3);
-  font-size: 10px;
-  font-family: 'IBM Plex Mono', monospace;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  pointer-events: none;
-}
-.card-label { font-size: 12px; font-weight: 700; color: var(--text); margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.1s; text-transform: uppercase; letter-spacing: 0.04em; }
+.card-art canvas { width: 100%; height: 100%; display: block; }.card-label { font-size: 12px; font-weight: 700; color: var(--text); margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.1s; text-transform: uppercase; letter-spacing: 0.04em; }
 .card-sublabel { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
 .section-header {
@@ -2536,35 +2511,6 @@ body {
       </div>
     </div>
 
-    <div class="settings-section-label" style="margin-top:0;border-top:var(--bw) solid var(--border)">Artist Photography</div>
-    <div style="padding:16px 20px;border-bottom:var(--bw) solid var(--border)">
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
-        Sonata fetches artist photography from <strong>fanart.tv</strong> through the bridge. Photos load automatically as you browse, and Fetch All Artist Photos below will work through every album-artist in your library.
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
-        <div id="fanart-status" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3);flex:1;min-width:200px">Not configured</div>
-        <div style="display:flex;gap:14px">
-          <button id="fanart-clear-misses-btn"
-            style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
-            Retry failed lookups
-          </button>
-          <button id="fanart-clear-cache-btn"
-            style="background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline;">
-            Clear image cache
-          </button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:10px">
-        <button id="fanart-fetch-all-btn"
-          style="background:var(--surface2);border:var(--bw) solid var(--border);color:var(--text);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;flex:1;">
-          Fetch All Artist Photos
-        </button>
-        <button id="fanart-stop-btn" style="display:none;background:var(--accent);border:var(--bw) solid var(--border);color:#fff;padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">
-          Stop
-        </button>
-      </div>
-      <div id="fanart-fetch-progress" style="display:none;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3);letter-spacing:0.08em;margin-top:8px"></div>
-    </div>
   </div>
 </div>
 
@@ -4504,16 +4450,12 @@ function renderArtistView() {
   }
 
   const filtered = Object.entries(map).filter(([,v]) => v.count > 1);
-  const photoCache = loadArtistCache();
 
   const cards = filtered.sort((a,b) => a[0].localeCompare(b[0])).map(([name, info]) => {
-    const cachedImg = photoCache[name];
-    const photoEl  = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">` : '';
     return `
     <div class="grid-card" data-artist="${esc(name)}">
       <div class="card-art">
         <canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas>
-        ${photoEl}
       </div>
       <div class="card-label">${esc(name)}</div>
       <div class="card-sublabel">${info.albumCount} album${info.albumCount !== 1 ? 's' : ''}</div>
@@ -4525,12 +4467,6 @@ function renderArtistView() {
     <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No artists found</div>'}</div>`;
 
   initArtCanvases();
-
-  if (jellyfin.bridgeUrl) {
-    filtered.forEach(([name]) => {
-      if (photoCache[name] === undefined) fetchAndCacheArtistImage(name);
-    });
-  }
 
   content.querySelectorAll('.grid-card').forEach(card => {
     card.onclick = () => {
@@ -4571,10 +4507,6 @@ function renderArtistAlbums(artistName) {
     return a.album.localeCompare(b.album);
   });
 
-  const photoCache = loadArtistCache();
-  const cachedImg  = photoCache[artistName];
-  const photoEl    = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(artistName)}">` : '';
-
   const cards = albums.map(info => `
     <div class="grid-card" data-album="${esc(info.album)}" data-artist="${esc(artistName)}">
       <div class="card-art">
@@ -4593,7 +4525,6 @@ function renderArtistAlbums(artistName) {
       <div class="artist-albums-hero">
         <div class="artist-albums-photo">
           <canvas class="art-canvas" data-seed="${esc(artistName)}" data-size="80"></canvas>
-          ${photoEl}
         </div>
         <div>
           <span class="section-title">${esc(artistName)}</span>
@@ -4655,20 +4586,15 @@ function renderSearchView() {
   );
   const matchedTracks = allMatchedTracks.slice(0, 100);
 
-  const photoCache = loadArtistCache();
-
   let html = `<div class="section-header"><span class="section-title">"${esc(state.searchQ)}"</span></div>`;
 
   // Artist tiles section
   if (matchedArtists.length) {
     const cards = matchedArtists.map(([name, info]) => {
-      const cachedImg = photoCache[name];
-      const photoEl  = cachedImg ? `<img class="artist-photo loaded" src="${esc(cachedImg)}" alt="${esc(name)}">` : '';
       return `
       <div class="grid-card search-artist-card" data-artist="${esc(name)}">
         <div class="card-art">
           <canvas class="art-canvas" data-seed="${esc(info.seed)}" data-size="160"></canvas>
-          ${photoEl}
         </div>
         <div class="card-label">${esc(name)}</div>
         <div class="card-sublabel">${info.albumCount} album${info.albumCount !== 1 ? 's' : ''}</div>
@@ -6179,308 +6105,6 @@ audio.addEventListener('sonata-play-new', () => {
 });
 
 // ══════════════════════════════════════════════
-//  ARTIST PHOTOGRAPHY (fanart.tv + MusicBrainz)
-// ══════════════════════════════════════════════
-
-const artistArt = {
-  apiKey:    localStorage.getItem('sonata_fanart_key') || '',
-  // Cache: artistName → { mbid, imageUrl, fetched } stored in localStorage
-  // null imageUrl = confirmed no image available
-  // undefined = not yet fetched
-};
-
-const FANART_CACHE_KEY = 'sonata_artist_photos';
-const MBID_CACHE_KEY   = 'sonata_artist_mbids';
-
-function loadArtistCache() {
-  try { return JSON.parse(localStorage.getItem(FANART_CACHE_KEY) || '{}'); }
-  catch(e) { return {}; }
-}
-function saveArtistCache(cache) {
-  try { localStorage.setItem(FANART_CACHE_KEY, JSON.stringify(cache)); }
-  catch(e) { /* localStorage full — trim oldest */ }
-}
-function loadMbidCache() {
-  try { return JSON.parse(localStorage.getItem(MBID_CACHE_KEY) || '{}'); }
-  catch(e) { return {}; }
-}
-function saveMbidCache(cache) {
-  try { localStorage.setItem(MBID_CACHE_KEY, JSON.stringify(cache)); }
-  catch(e) {}
-}
-
-// Fetch MBID from MusicBrainz (rate-limited to 1 req/sec by MB)
-// Returns mbid string or null
-const mbidQueue = [];
-let mbidFetching = false;
-
-async function getMBID(artistName) {
-  const cache = loadMbidCache();
-  if (cache[artistName] !== undefined) return cache[artistName];
-
-  return new Promise(resolve => {
-    mbidQueue.push({ artistName, resolve });
-    processMBIDQueue();
-  });
-}
-
-async function processMBIDQueue() {
-  if (mbidFetching || !mbidQueue.length) return;
-  mbidFetching = true;
-
-  const { artistName, resolve } = mbidQueue.shift();
-  const cache = loadMbidCache();
-
-  if (cache[artistName] !== undefined) {
-    resolve(cache[artistName]);
-    mbidFetching = false;
-    setTimeout(processMBIDQueue, 0);
-    return;
-  }
-
-  // Run the lookup with a transient-error-tolerant cache strategy:
-  // - Network errors and 5xx (incl. 503 rate limit) are NOT cached as null,
-  //   so the same artist will be retried on a subsequent run.
-  // - 200 with no match IS cached as null (definitive miss).
-  // - User-Agent cannot be set from a browser fetch (forbidden header), so
-  //   we don't try. Browsers send their own UA which MB accepts.
-  // - Use unquoted query so MB does fuzzy/synonym matching ("Beatles" finds "The Beatles").
-  let mbid = null;
-  let definitive = true;
-  try {
-    // Strip Lucene specials that would break the query, then trim
-    const clean = artistName.replace(/[+\-!(){}\[\]^"~*?:\\\/]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!clean) {
-      mbid = null;
-    } else {
-      const url = `${jellyfin.bridgeUrl}/mbid?artist=${encodeURIComponent(clean)}`;
-      const r   = await fetch(url);
-      if (r.ok) {
-        const data = await r.json();
-        mbid = data.mbid || null;
-      } else if (r.status >= 500 || r.status === 429) {
-        // Transient — don't cache, will retry next time
-        definitive = false;
-        console.warn(`[Sonata] MB lookup transient error ${r.status} for "${artistName}"`);
-      } else {
-        // 4xx other than 429 — definitive miss
-        mbid = null;
-      }
-    }
-  } catch(e) {
-    // Network failure — don't cache, will retry
-    definitive = false;
-    console.warn(`[Sonata] MB lookup network error for "${artistName}":`, e.message);
-  }
-
-  if (definitive) {
-    cache[artistName] = mbid;
-    saveMbidCache(cache);
-  }
-  resolve(definitive ? mbid : null);
-
-  mbidFetching = false;
-  // MusicBrainz rate limit: 1 request per second
-  setTimeout(processMBIDQueue, 1100);
-}
-
-// Fetch artist thumbnail from fanart.tv using MBID
-// Returns: { url, definitive } — definitive=false means transient error,
-//          should not be cached as null
-async function getFanartImage(mbid) {
-  if (!jellyfin.bridgeUrl || !mbid) return { url: null, definitive: true };
-  try {
-    const url = `${jellyfin.bridgeUrl}/fanart/${mbid}`;
-    const r   = await fetch(url);
-    if (r.ok) {
-      const data = await r.json();
-      const thumbs = data.artistthumb || data.artistbackground || [];
-      if (!thumbs.length) return { url: null, definitive: true };
-      const best = thumbs.sort((a,b) => parseInt(b.likes||0) - parseInt(a.likes||0))[0];
-      return { url: best?.url || null, definitive: true };
-    }
-    if (r.status === 404) {
-      // No artist record on fanart.tv — definitive miss
-      return { url: null, definitive: true };
-    }
-    if (r.status === 401 || r.status === 403) {
-      console.warn(`[Sonata] fanart.tv auth error ${r.status} — check API key`);
-      return { url: null, definitive: false };
-    }
-    if (r.status >= 500 || r.status === 429) {
-      console.warn(`[Sonata] fanart.tv transient error ${r.status} for mbid ${mbid}`);
-      return { url: null, definitive: false };
-    }
-    // Other 4xx — treat as definitive miss
-    return { url: null, definitive: true };
-  } catch(e) {
-    console.warn(`[Sonata] fanart.tv network error for mbid ${mbid}:`, e.message);
-    return { url: null, definitive: false };
-  }
-}
-
-// Main entry point: get image URL for an artist, using cache
-// Returns: URL string, null (confirmed none), or undefined (not yet fetched)
-async function getArtistImageUrl(artistName) {
-  if (!jellyfin.bridgeUrl) return null;
-  const cache = loadArtistCache();
-  if (cache[artistName] !== undefined) return cache[artistName]; // null or URL
-
-  // Fetch in background — return undefined immediately so card shows Mondrian first
-  fetchAndCacheArtistImage(artistName);
-  return undefined;
-}
-
-async function fetchAndCacheArtistImage(artistName) {
-  const cache = loadArtistCache();
-  if (cache[artistName] !== undefined) return cache[artistName]; // already fetched
-
-  const mbid = await getMBID(artistName);
-  if (!mbid) {
-    // No MBID — could be a definitive miss or could be transient. The MBID
-    // cache layer already decided: if it cached null, it's definitive there
-    // and we mirror that decision here. If MBID was a transient failure, the
-    // cache wasn't updated, and re-running will retry.
-    const mbidCache = loadMbidCache();
-    if (mbidCache[artistName] === null) {
-      // Definitive: this artist is not on MusicBrainz at all
-      cache[artistName] = null;
-      saveArtistCache(cache);
-    }
-    return null;
-  }
-
-  const result = await getFanartImage(mbid);
-  if (result.definitive) {
-    cache[artistName] = result.url;
-    saveArtistCache(cache);
-  }
-
-  // If the artist view is currently showing, update the card
-  if (result.url && state.currentView === 'artists' && !state.drillTarget) {
-    const card = document.querySelector(`.grid-card[data-artist="${CSS.escape(artistName)}"]`);
-    if (card) injectArtistPhoto(card, artistName, result.url);
-  }
-
-  return result.url;
-}
-
-// Inject a photo into an artist card (or leave Mondrian if no image)
-function injectArtistPhoto(cardEl, artistName, imageUrl) {
-  const artEl = cardEl.querySelector('.card-art');
-  if (!artEl) return;
-
-  // Remove any existing photo
-  artEl.querySelectorAll('.artist-photo, .artist-photo-loading').forEach(el => el.remove());
-
-  if (!imageUrl) return; // keep Mondrian
-
-  const img = document.createElement('img');
-  img.className = 'artist-photo';
-  img.alt = artistName;
-  img.onload  = () => img.classList.add('loaded');
-  img.onerror = () => img.remove();
-  img.src = imageUrl;
-  artEl.appendChild(img);
-}
-
-// Settings UI wiring
-function updateFanartStatus() {
-  const el = document.getElementById('fanart-status');
-  if (!el) return;
-  const cache   = loadArtistCache();
-  const fetched = Object.keys(cache).length;
-  const withImg = Object.values(cache).filter(Boolean).length;
-  if (!jellyfin.bridgeUrl) {
-    el.textContent = 'Bridge not configured';
-    el.style.color = 'var(--text3)';
-  } else {
-    el.textContent  = fetched
-      ? `${withImg} artist photo${withImg !== 1 ? 's' : ''} cached (${fetched} artists checked)`
-      : 'Bridge ready — photos will load as you browse';
-    el.style.color = 'var(--blue)';
-  }
-}
-
-document.getElementById('fanart-clear-cache-btn').onclick = () => {
-  localStorage.removeItem(FANART_CACHE_KEY);
-  localStorage.removeItem(MBID_CACHE_KEY);
-  updateFanartStatus();
-  showToast('Artist image cache cleared');
-};
-
-// Clear only the null/failed entries from both caches, leaving real hits in place.
-// Useful when something went wrong during a previous Fetch All and a chunk of
-// artists got cached as "no image" when the truth was a transient error.
-document.getElementById('fanart-clear-misses-btn').onclick = () => {
-  const fanart = loadArtistCache();
-  const mbid   = loadMbidCache();
-  let cleared = 0;
-  for (const k of Object.keys(fanart)) {
-    if (fanart[k] === null) { delete fanart[k]; cleared++; }
-  }
-  for (const k of Object.keys(mbid)) {
-    if (mbid[k] === null) delete mbid[k];
-  }
-  saveArtistCache(fanart);
-  saveMbidCache(mbid);
-  updateFanartStatus();
-  showToast(`Cleared ${cleared.toLocaleString()} failed lookups — Fetch All will retry them`);
-};
-
-// ── Fetch All artist photos ──────────────────────────────────────────────────
-// Walks every distinct album-artist in the library at the existing 1/sec rate
-// limit, populating the localStorage cache silently. Stoppable.
-let fetchAllAbort = false;
-
-async function fetchAllArtistPhotos() {
-  if (!jellyfin.bridgeUrl) { showToast('Configure the Bridge URL first'); return; }
-  ensureIndexes();
-  if (!state.indexes) { showToast('Library not loaded yet'); return; }
-
-  const cache = loadArtistCache();
-  // Pull all distinct album-artists; skip ones we've already attempted
-  const all = Object.keys(state.indexes.artists).filter(name => cache[name] === undefined);
-  if (!all.length) { showToast('All artists already fetched'); return; }
-
-  const startBtn = document.getElementById('fanart-fetch-all-btn');
-  const stopBtn  = document.getElementById('fanart-stop-btn');
-  const progEl   = document.getElementById('fanart-fetch-progress');
-
-  fetchAllAbort = false;
-  startBtn.style.display = 'none';
-  stopBtn.style.display  = '';
-  progEl.style.display   = '';
-
-  let done = 0;
-  let found = 0;
-  for (const name of all) {
-    if (fetchAllAbort) break;
-    progEl.textContent = `Fetching ${done + 1} / ${all.length}: ${name}`;
-    try {
-      const url = await fetchAndCacheArtistImage(name);
-      if (url) found++;
-    } catch(e) { /* ignore individual failures */ }
-    done++;
-    // Update the live status panel periodically
-    if (done % 20 === 0) updateFanartStatus();
-  }
-
-  startBtn.style.display = '';
-  stopBtn.style.display  = 'none';
-  progEl.textContent = fetchAllAbort
-    ? `Stopped at ${done} / ${all.length} (${found} new photos found)`
-    : `Done · ${done} artists checked, ${found} new photos`;
-  updateFanartStatus();
-
-  // Hide the message after 8 seconds
-  setTimeout(() => { if (progEl) progEl.style.display = 'none'; }, 8000);
-}
-
-document.getElementById('fanart-fetch-all-btn').onclick = fetchAllArtistPhotos;
-document.getElementById('fanart-stop-btn').onclick = () => { fetchAllAbort = true; };
-
-// ══════════════════════════════════════════════
 //  LIBRARY CACHE (IndexedDB)
 // ══════════════════════════════════════════════
 const CACHE_DB_NAME    = 'sonata-library';
@@ -6578,8 +6202,6 @@ async function clearLibraryCache() {
   } catch(e) {}
 }
 
-// Fanart status (no key input anymore — bridge holds the key)
-updateFanartStatus();
 
 // Pre-populate the Bridge URL input if already saved
 (function initBridgeUI() {
