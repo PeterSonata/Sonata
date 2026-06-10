@@ -17,6 +17,62 @@
 // native fetch only, no node-fetch.
 // ============================================================
 
+
+// Fetch the whole Sonos household topology from any one reachable player.
+// All players share the same topology, so a single call describes everything.
+// Returns visible, addressable zones only: stereo-pair satellites and bonded
+// units (Invisible="1") are dropped, and each zone resolves to its group
+// coordinator's host, the unit that accepts transport and drives the pair/group.
+async function getZones(seedHost) {
+  const body =
+    '<?xml version="1.0"?>' +
+    '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" ' +
+    's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>' +
+    '<u:GetZoneGroupState xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1">' +
+    '</u:GetZoneGroupState></s:Body></s:Envelope>';
+
+  const res = await fetch(`http://${seedHost}:1400/ZoneGroupTopology/Control`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml; charset="utf-8"',
+      SOAPACTION: '"urn:schemas-upnp-org:service:ZoneGroupTopology:1#GetZoneGroupState"',
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`ZoneGroupTopology ${res.status}`);
+
+  // State arrives XML-escaped inside the SOAP response. Unescape, then pull
+  // members and groups out by hand.
+  const xml = unescapeXml(await res.text());
+
+  // UUID -> { host, name } for every visible member.
+  const members = {};
+  for (const m of xml.matchAll(/<ZoneGroupMember\s([^>]*?)\/?>/g)) {
+    const a = m[1];
+    const uuid = (a.match(/UUID="([^"]*)"/) || [])[1];
+    const name = unescapeXml((a.match(/ZoneName="([^"]*)"/) || [])[1] || '');
+    const loc = (a.match(/Location="([^"]*)"/) || [])[1] || '';
+    const host = (loc.match(/^https?:\/\/([^:/]+)/) || [])[1];
+    if (!uuid || !host || /Invisible="1"/.test(a)) continue;
+    members[uuid] = { host, name };
+  }
+
+  // One entry per zone group, addressed at its coordinator.
+  const zones = [];
+  for (const g of xml.matchAll(/<ZoneGroup\s([^>]*?)>/g)) {
+    const coord = (g[1].match(/Coordinator="([^"]*)"/) || [])[1];
+    if (members[coord]) zones.push(members[coord]);
+  }
+  return zones;
+}
+
+function unescapeXml(s) {
+  return s
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&'); // ampersand last
+}
+
 const dgram = require('dgram');
 
 // Sonos players speak UPnP on port 1400.
@@ -101,6 +157,46 @@ function discover(timeoutMs = 3000) {
 
     setTimeout(done, timeoutMs);
   });
+}
+
+// ------------------------------------------------------------
+// Room-name lookup
+// ------------------------------------------------------------
+
+// Fetch a player's device description and read its <roomName>, so
+// the desktop picker can show "Library" rather than a bare IP. One
+// extra HTTP GET per host. Returns null on any failure (not a
+// Sonos, powered off, slow) so a bad host never sinks the listing.
+async function roomName(host, timeoutMs = 1500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(
+      `http://${host}:${SONOS_PORT}/xml/device_description.xml`,
+      { signal: controller.signal }
+    );
+    if (!res.ok) return null;
+    const xml = await res.text();
+    const m = xml.match(/<roomName>([^<]*)<\/roomName>/);
+    return m ? m[1] : null;
+  } catch (_) {
+    return null; // unreachable or not a Sonos
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Enrich a list of { host } players with a name, resolving all
+// hosts in parallel so listing N speakers costs one round-trip of
+// latency, not N. Hosts that do not answer keep name: null, which
+// the client can fall back to showing as the bare IP.
+async function withRoomNames(players) {
+  return Promise.all(
+    players.map(async (pl) => ({
+      ...pl,
+      name: await roomName(pl.host),
+    }))
+  );
 }
 
 // ------------------------------------------------------------
@@ -222,6 +318,9 @@ async function getTransportState(host) {
 module.exports = {
   discover,
   configuredHosts,
+  roomName,
+  withRoomNames,
+  getZones,  
   setUri,
   play,
   pause,

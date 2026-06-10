@@ -5,7 +5,9 @@
 // Read endpoints (open):
 //   GET  /sonos                 list discovered + configured players
 //
-// Control endpoints (require X-Sonata-Key):
+// Control endpoints (require X-Sonata-Key from outside the LAN;
+// requests from a private/LAN address skip the key, since casting
+// only works on the local network anyway):
 //   POST /sonos/play            body { host, uris: [...] } | { host, uri }
 //   POST /sonos/pause           body { host }
 //   POST /sonos/resume          body { host }
@@ -33,6 +35,39 @@ const router = express.Router();
 const sonos = require('../lib/sonos');
 const auth = require('../lib/auth');
 const store = require('../lib/store');
+
+// LAN-aware auth for the control routes. Sonos only does anything
+// useful when the caller is on the same network as the speakers and
+// the NAS, so a request from a private address is trusted and skips
+// the X-Sonata-Key check. Anything arriving from outside (e.g. via
+// the external DuckDNS forward) still goes through the normal auth
+// guard, so the public surface is not left open.
+//
+// Private ranges: 10/8, 172.16/12, 192.168/16, plus loopback and
+// IPv4-mapped IPv6 (::ffff:192.168.x.x), which is how Node reports
+// LAN clients when the socket is dual-stack.
+function isPrivateAddr(ip) {
+  if (!ip) return false;
+  // Strip IPv4-mapped IPv6 prefix.
+  const addr = ip.replace(/^::ffff:/, '');
+  if (addr === '127.0.0.1' || addr === '::1') return true;
+  if (addr.startsWith('10.')) return true;
+  if (addr.startsWith('192.168.')) return true;
+  // 172.16.0.0 - 172.31.255.255
+  const m = addr.match(/^172\.(\d+)\./);
+  if (m) {
+    const second = parseInt(m[1], 10);
+    if (second >= 16 && second <= 31) return true;
+  }
+  return false;
+}
+
+function lanOrAuth(req, res, nextMw) {
+  // req.ip respects trust proxy if set; fall back to the raw socket.
+  const ip = req.ip || (req.socket && req.socket.remoteAddress) || '';
+  if (isPrivateAddr(ip)) return nextMw();
+  return auth(req, res, nextMw);
+}
 
 // How often the advance poller checks each active player, in ms.
 // Sonos transport state is cheap to read and 4s is responsive
@@ -69,11 +104,32 @@ async function writeQueue(host, entry) {
 // ------------------------------------------------------------
 router.get('/sonos', async (req, res) => {
   try {
+    // Find the speakers on the LAN (plus any configured fallbacks).
     const players = await sonos.discover(3000);
+
+    // Ask any one of them for the household topology. All players share
+    // it, so a single call collapses stereo pairs and bonded units to one
+    // addressable entry per room (the group coordinator). Querying from a
+    // satellite is fine: it still serves the full topology.
+    const seed = (players[0] && players[0].host) || sonos.configuredHosts()[0];
+    let named = null;
+    if (seed) {
+      try {
+        const zones = await sonos.getZones(seed);
+        if (zones.length > 0) named = zones;
+      } catch (_) {
+        // Topology read failed; fall through to the per-host path.
+      }
+    }
+
+    // Fallback: the old discover + per-host roomName listing. Degrades to a
+    // duplicated-but-functional list rather than an empty picker.
+    if (!named) named = await sonos.withRoomNames(players);
+
     res.json({
-      players,
+      players: named,
       configured: sonos.configuredHosts(),
-      count: players.length,
+      count: named.length,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -81,16 +137,63 @@ router.get('/sonos', async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// Control: play a list (or single) of URIs from the start
+// Stream URL construction (server-side)
 // ------------------------------------------------------------
-router.post('/sonos/play', auth, async (req, res) => {
-  const { host } = req.body || {};
+// The speaker streams bytes from Jellyfin directly, so it needs a
+// LAN-reachable URL. The client must NOT build this (its own path to
+// the bridge may be Tailscale/QuickConnect, which the speaker cannot
+// route to). The bridge knows its own LAN Jellyfin address from
+// config, so it builds the URL here. Two hard-won details are baked
+// in permanently: the .mp3 extension (a bare /stream gives UPnP 714,
+// illegal MIME-type, because Sonos is strict about the container),
+// and the API key, kept server-side rather than handed to clients.
+let _cfg = null;
+function jellyfinConfig() {
+  if (_cfg) return _cfg;
+  let base = process.env.JELLYFIN_URL || '';
+  let key = process.env.JELLYFIN_API_KEY || '';
+  // Fall back to lib/config if it exposes the values.
+  if (!base || !key) {
+    try {
+      const c = require('../lib/config');
+      base = base || c.JELLYFIN_URL || (c.jellyfin && c.jellyfin.url) || '';
+      key = key || c.JELLYFIN_API_KEY || (c.jellyfin && c.jellyfin.apiKey) || '';
+    } catch (_) { /* config shape differs; env is enough */ }
+  }
+  _cfg = { base: base.replace(/\/$/, ''), key };
+  return _cfg;
+}
+
+// Build the LAN .mp3 stream URL for a Jellyfin item id.
+function streamUrlForId(id) {
+  const { base, key } = jellyfinConfig();
+  if (!base) throw new Error('JELLYFIN_URL not configured on the bridge');
+  const keyParam = key ? `&api_key=${encodeURIComponent(key)}` : '';
+  return `${base}/Audio/${encodeURIComponent(id)}/stream.mp3?static=true${keyParam}`;
+}
+
+// ------------------------------------------------------------
+// Control: play a list from the start
+// ------------------------------------------------------------
+// Accepts item ids (preferred) and builds LAN stream URLs itself, or
+// raw uris (kept for the curl test path). ids take precedence.
+router.post('/sonos/play', lanOrAuth, async (req, res) => {
+  const { host, ids } = req.body || {};
   let { uris, uri } = req.body || {};
   if (!host) return res.status(400).json({ error: 'host required' });
 
+  // Prefer ids: build the speaker URLs server-side.
+  if (Array.isArray(ids) && ids.length > 0) {
+    try {
+      uris = ids.map(streamUrlForId);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   if (!uris && uri) uris = [uri];
   if (!Array.isArray(uris) || uris.length === 0) {
-    return res.status(400).json({ error: 'uris (array) or uri required' });
+    return res.status(400).json({ error: 'ids (array), uris (array) or uri required' });
   }
 
   try {
@@ -108,7 +211,7 @@ router.post('/sonos/play', auth, async (req, res) => {
 // Control: transport
 // ------------------------------------------------------------
 function transportRoute(path, fn) {
-  router.post(path, auth, async (req, res) => {
+  router.post(path, lanOrAuth, async (req, res) => {
     const { host } = req.body || {};
     if (!host) return res.status(400).json({ error: 'host required' });
     try {
@@ -126,7 +229,7 @@ transportRoute('/sonos/previous', ({ host }) => sonos.previous(host));
 
 // Manual skip: advance our own queue rather than calling Sonos Next,
 // since the native queue is empty (we push one URI at a time).
-router.post('/sonos/next', auth, async (req, res) => {
+router.post('/sonos/next', lanOrAuth, async (req, res) => {
   const { host } = req.body || {};
   if (!host) return res.status(400).json({ error: 'host required' });
   try {
@@ -137,7 +240,7 @@ router.post('/sonos/next', auth, async (req, res) => {
   }
 });
 
-router.post('/sonos/volume', auth, async (req, res) => {
+router.post('/sonos/volume', lanOrAuth, async (req, res) => {
   const { host, level } = req.body || {};
   if (!host) return res.status(400).json({ error: 'host required' });
   if (level === undefined) return res.status(400).json({ error: 'level required' });
