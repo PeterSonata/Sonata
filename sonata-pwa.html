@@ -3369,6 +3369,7 @@ function playCurrentQueue() {
 audio.ontimeupdate = () => {
   if (_silentMode) return;   // ignore ticks from silent loop
   if (!audio.duration) return;
+  _msSetPosition();
   const pct = (audio.currentTime / audio.duration) * 100;
   const w = pct + '%';
   document.getElementById('progress-fill').style.width = w;
@@ -3692,6 +3693,38 @@ function renderPlayingState() {
 // ══════════════════════════════════════════════
 //  MEDIA SESSION API
 // ══════════════════════════════════════════════
+// sonata-mediasession-rich: artwork + position state for the OS media overlay.
+let _msLastPos = 0;
+
+function _msArtwork(t) {
+  if (!t || !t.artUrl) return [];
+  // t.artUrl is a Jellyfin Primary-image URL carrying maxHeight=300.
+  // Offer the shell a few sizes by rewriting the height hint; it picks
+  // whichever fits the surface (flyout, lock screen, media keys popup).
+  if (!/maxHeight=\d+/.test(t.artUrl)) {
+    return [{ src: t.artUrl, sizes: '300x300' }];
+  }
+  const mk = (h) => ({ src: t.artUrl.replace(/maxHeight=\d+/, 'maxHeight=' + h), sizes: h + 'x' + h });
+  return [mk(96), mk(256), mk(512)];
+}
+
+function _msSetPosition(force) {
+  if (!('mediaSession' in navigator) || !('setPositionState' in navigator.mediaSession)) return;
+  if (_silentMode) return;
+  const dur = audio.duration;
+  if (!dur || !isFinite(dur)) return;            // stream not ready, or live: skip
+  const now = Date.now();
+  if (!force && now - _msLastPos < 900) return;  // throttle to ~1/sec
+  _msLastPos = now;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: dur,
+      playbackRate: audio.playbackRate || 1,
+      position: Math.min(audio.currentTime || 0, dur),
+    });
+  } catch (e) { /* invalid values, ignore */ }
+}
+
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || !state.currentTrack) return;
   const t = state.currentTrack;
@@ -3700,6 +3733,7 @@ function updateMediaSession() {
     title:  t.title,
     artist: t.artist,
     album:  t.album,
+    artwork: _msArtwork(t),
   });
 
   navigator.mediaSession.setActionHandler('play',         () => resumePlayback());
@@ -3709,6 +3743,7 @@ function updateMediaSession() {
   navigator.mediaSession.setActionHandler('seekto', (d) => { if (d.seekTime !== undefined) audio.currentTime = d.seekTime; });
 
   navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+  _msSetPosition(true);
 }
 
 // ══════════════════════════════════════════════
