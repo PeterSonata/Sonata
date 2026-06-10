@@ -5297,9 +5297,13 @@ const speaker = {
 
 // ── Modal open/close ──
 function openSpeakerModal() {
-  loadSonosBridgeUrl();
+  /* sonata-speaker-modal-fixed */
   renderSpeakerModal();
   document.getElementById('speaker-modal').classList.add('visible');
+  // Discover rooms through the live NAS connection. Replaces the old
+  // loadSonosBridgeUrl() path, which referenced a settings input that
+  // no longer exists and threw before the modal could show.
+  discoverSonosRooms();
 }
 function closeSpeakerModal() {
   document.getElementById('speaker-modal').classList.remove('visible');
@@ -5312,10 +5316,9 @@ document.getElementById('fp-cast-btn').onclick = openSpeakerModal;
 document.getElementById('desktop-cast-btn').onclick = openSpeakerModal;
 
 function loadSonosBridgeUrl() {
-  const saved = localStorage.getItem('sonata_sonos_bridge') || '';
-  document.getElementById('sonos-bridge-input').value = saved;
-  speaker.sonosBridgeUrl = saved;
-  if (saved) discoverSonosRooms();
+  // Obsolete: the separate Sonos bridge URL was replaced by the
+  // shared nas.activeURL connection. Kept as a no-op so any stray
+  // caller cannot throw. Discovery is kicked from openSpeakerModal.
 }
 
 // ── Update cast button appearance ──
