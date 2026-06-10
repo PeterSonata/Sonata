@@ -3413,8 +3413,12 @@ function nextTrack() {
 }
 function togglePlay() {
   if (isCasting()) {
+    /* sonata-sonos-playstate */
     if (speaker.sonosPlaying) { sonosControl('/sonos/pause'); speaker.sonosPlaying = false; }
     else { sonosControl('/sonos/resume'); speaker.sonosPlaying = true; }
+    // Keep state.playing in step so updateAllPlayerUIs picks the right
+    // icon (it reads state.playing, not speaker.sonosPlaying).
+    state.playing = speaker.sonosPlaying;
     updateAllPlayerUIs();
     return;
   }
@@ -3605,7 +3609,7 @@ function updateFullPlayer() {
   const t = state.currentTrack;
   if (!t) return;
   document.getElementById('fp-title').textContent  = t.title;
-  document.getElementById('fp-artist').textContent = t.artist;
+  document.getElementById('fp-artist').textContent = castArtist(t);
   applyArtToCanvas(document.getElementById('fp-canvas'), t, 320);
   document.getElementById('fp-art').className = state.playing ? 'playing' : 'paused';
 }
@@ -3639,19 +3643,19 @@ function updateAllPlayerUIs() {
 
   // Desktop now playing
   document.getElementById('np-title').textContent  = t.title;
-  document.getElementById('np-artist').textContent = t.artist;
+  document.getElementById('np-artist').textContent = castArtist(t);
   document.getElementById('np-title').style.color  = '';
   applyArtToCanvas(document.getElementById('np-canvas'), t, 48);
 
   // Mini player
   document.getElementById('mini-title').textContent  = t.title;
-  document.getElementById('mini-artist').textContent = t.artist;
+  document.getElementById('mini-artist').textContent = castArtist(t);
   document.getElementById('mini-title').style.color  = '';
   applyArtToCanvas(document.getElementById('mini-canvas'), t, 42);
 
   // Full player
   document.getElementById('fp-title').textContent  = t.title;
-  document.getElementById('fp-artist').textContent = t.artist;
+  document.getElementById('fp-artist').textContent = castArtist(t);
   applyArtToCanvas(document.getElementById('fp-canvas'), t, 320);
 }
 
@@ -5651,6 +5655,18 @@ function isCasting() {
   try { return !!(speaker && speaker.activeRoom); }
   catch (e) { return false; }  // speaker not yet initialised (load-time call)
 }
+/* sonata-sonos-banner */
+// Artist label with the cast suffix appended when casting, computed
+// at write time so any UI refresh shows it (rather than appending
+// after updateAllPlayerUIs, which other refreshes would overwrite).
+function castArtist(t) {
+  const base = (t && t.artist) || '';
+  if (isCasting()) {
+    const room = (speaker.activeRoom && speaker.activeRoom.name) || 'speaker';
+    return base ? `${base} · Casting to ${room}` : `Casting to ${room}`;
+  }
+  return base;
+}
 
 // Item ids for the current queue, from the current position onward.
 // Falls back to just the current track if the queue isn't populated.
@@ -5706,14 +5722,6 @@ function reflectCastTrack(track) {
   state.playing = true;
   updateAllPlayerUIs();
   renderPlayingState();
-  // Re-apply the banner: updateAllPlayerUIs has just set the artist
-  // line to the real artist, so append the cast label after it.
-  const room = (speaker.activeRoom && speaker.activeRoom.name) || 'speaker';
-  ['np-artist','mini-artist','fp-artist'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && track.artist) el.textContent = `${track.artist} · Casting to ${room}`;
-    else if (el) el.textContent = `Casting to ${room}`;
-  });
 }
 
 async function playSonos(room) {
