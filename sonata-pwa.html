@@ -4283,7 +4283,8 @@ function renderTrackList(tracks, backFn, backLabel) {
     </button>` : '';
 
   // Tweak 8: when drilling from home, back-button reads 'Home'.
-  const defaultBackLabel = (state.drillOrigin === 'home' && !backFn) ? 'Home' : 'Back';
+  const defaultBackLabel = (state.drillOrigin === 'search' && !backFn) ? 'Search results'
+                         : (state.drillOrigin === 'home' && !backFn) ? 'Home' : 'Back';
   const backBtn = hasBack ? `
     <button class="back-btn" id="back-btn">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -4355,6 +4356,7 @@ function renderTrackList(tracks, backFn, backLabel) {
     document.getElementById('back-btn').onclick = backFn
       ? backFn
       : () => {
+          if (state.drillOrigin === 'search') { _restoreSearch(); return; }
           // Tweak 8: if we drilled in from home, back returns to home.
           if (state.drillOrigin === 'home') {
             state.drillOrigin = null;
@@ -4720,7 +4722,7 @@ function renderArtistAlbums(artistName) {
   content.innerHTML = `
     <button class="back-btn" id="back-btn">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      Artists
+      ${state.drillOrigin === 'search' ? 'Search results' : 'Artists'}
     </button>
     <div class="section-header artist-albums-header">
       <div class="artist-albums-hero">
@@ -4738,6 +4740,7 @@ function renderArtistAlbums(artistName) {
   initArtCanvases();
 
   document.getElementById('back-btn').onclick = () => {
+    if (state.drillOrigin === 'search') { _restoreSearch(); return; }
     state.drillTarget = null;
     renderView();
   };
@@ -4755,6 +4758,18 @@ function renderArtistAlbums(artistName) {
 }
 
 // ── Search view ───────────────────────────────────────────────────────────────
+
+// sonata-search-return: return to the search results after drilling into a tile.
+function _restoreSearch() {
+  state.drillTarget = null;
+  state.drillOrigin = null;
+  state.searchQ = state.searchReturn || '';
+  state.searchReturn = null;
+  state.currentView = 'search';
+  const _s = document.getElementById('search');     if (_s) _s.value = state.searchQ;
+  const _m = document.getElementById('mob-search');  if (_m) _m.value = state.searchQ;
+  renderView();
+}
 
 function renderSearchView() {
   if (!state.searchQ) { renderTrackList(state.tracks); return; }
@@ -4875,6 +4890,8 @@ function renderSearchView() {
     card.onclick = () => {
       state.drillTarget = { type: 'artist', value: card.dataset.artist };
       state.currentView = 'artists';
+      state.drillOrigin = 'search';
+      state.searchReturn = state.searchQ;
       state.searchQ = '';
       document.getElementById('search').value = '';
       document.getElementById('mob-search').value = '';
@@ -4886,6 +4903,8 @@ function renderSearchView() {
     card.onclick = () => {
       state.drillTarget = { type: 'album', value: card.dataset.album, artist: card.dataset.artist };
       state.currentView = 'albums';
+      state.drillOrigin = 'search';
+      state.searchReturn = state.searchQ;
       state.searchQ = '';
       document.getElementById('search').value = '';
       document.getElementById('mob-search').value = '';
