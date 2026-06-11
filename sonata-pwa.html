@@ -4779,13 +4779,22 @@ function renderSearchView() {
     .sort((a,b) => a[0].localeCompare(b[0]));
   const matchedArtists = allMatchedArtists.slice(0, 30);
 
-  // Matching tracks (title or album, not already covered by artist match)
-  // Round 1 addendum: cap rendered tracks. allMatchedTracks keeps the
-  // full count for the section label.
-  const allMatchedTracks = state.tracks.filter(t =>
-    t.title.toLowerCase().includes(q) || t.album.toLowerCase().includes(q)
-  );
+  // sonata-search-albums: tracks match on TITLE only now; album-name matches
+  // surface as their own album tiles instead of polluting the track list.
+  const allMatchedTracks = state.tracks.filter(t => t.title.toLowerCase().includes(q));
   const matchedTracks = allMatchedTracks.slice(0, 100);
+
+  // Matching albums (album title contains the term), grouped per album+artist.
+  // Any category: the album drill-down filters purely by album name.
+  const albumMap = {};
+  for (const t of state.tracks) {
+    if (!t.album || !t.album.toLowerCase().includes(q)) continue;
+    const aa = t.albumArtist || t.artist;
+    const key = t.album + '||' + aa;
+    if (!albumMap[key]) albumMap[key] = { album: t.album, artist: aa, seed: t.artSeed, artUrl: t.artUrl };
+  }
+  const allMatchedAlbums = Object.values(albumMap).sort((a,b) => a.album.localeCompare(b.album));
+  const matchedAlbums = allMatchedAlbums.slice(0, 48);
 
   let html = `<div class="section-header"><span class="section-title">"${esc(state.searchQ)}"</span></div>`;
 
@@ -4809,12 +4818,28 @@ function renderSearchView() {
       <div class="grid-view" style="border-top:none">${cards}</div>`;
   }
 
+  // Album tiles section
+  if (matchedAlbums.length) {
+    const acards = matchedAlbums.map(info => `
+      <div class="grid-card search-album-card" data-album="${esc(info.album)}" data-artist="${esc(info.artist)}">
+        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
+        <div class="card-label">${esc(info.album)}</div>
+        <div class="card-sublabel">${esc(info.artist)}</div>
+      </div>`).join('');
+    const _albumTrunc = allMatchedAlbums.length > matchedAlbums.length
+      ? ` <span style="font-weight:400;opacity:0.6">(showing ${matchedAlbums.length} of ${allMatchedAlbums.length})</span>`
+      : '';
+    html += `
+      <div class="search-section-label">Albums${_albumTrunc}</div>
+      <div class="grid-view" style="border-top:none">${acards}</div>`;
+  }
+
   // Track results section
   if (matchedTracks.length) {
     const _tracksLabel = allMatchedTracks.length > matchedTracks.length
       ? `${matchedTracks.length} of ${allMatchedTracks.length.toLocaleString()}`
       : `${matchedTracks.length}`;
-    html += `<div class="search-section-label" style="margin-top:0">Tracks &amp; Albums <span style="font-weight:400;opacity:0.6">(${_tracksLabel})</span></div>`;
+    html += `<div class="search-section-label" style="margin-top:0">Tracks <span style="font-weight:400;opacity:0.6">(${_tracksLabel})</span></div>`;
     const rows = matchedTracks.map((t, i) => {
       const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
       const playing   = isPlaying && state.playing;
@@ -4839,7 +4864,7 @@ function renderSearchView() {
       <div id="track-list">${rows}</div>`;
   }
 
-  if (!matchedArtists.length && !matchedTracks.length) {
+  if (!matchedArtists.length && !matchedAlbums.length && !matchedTracks.length) {
     html += `<div style="padding:32px 24px;color:var(--text3);font-size:13px">No results for "${esc(state.searchQ)}"</div>`;
   }
 
@@ -4850,6 +4875,17 @@ function renderSearchView() {
     card.onclick = () => {
       state.drillTarget = { type: 'artist', value: card.dataset.artist };
       state.currentView = 'artists';
+      state.searchQ = '';
+      document.getElementById('search').value = '';
+      document.getElementById('mob-search').value = '';
+      renderView();
+    };
+  });
+
+  content.querySelectorAll('.search-album-card').forEach(card => {
+    card.onclick = () => {
+      state.drillTarget = { type: 'album', value: card.dataset.album, artist: card.dataset.artist };
+      state.currentView = 'albums';
       state.searchQ = '';
       document.getElementById('search').value = '';
       document.getElementById('mob-search').value = '';
