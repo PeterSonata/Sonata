@@ -4584,9 +4584,57 @@ function renderArtistView() {
     for (const v of Object.values(map)) v.albumCount = v.albums.size;
   }
 
-  const filtered = Object.entries(map).filter(([,v]) => v.count > 1);
+  // sonata-artist-album-floor: feature only artists you own an album by, and
+  // shuffle the grid by default with a header button to flip to A-Z and back to a
+  // fresh shuffle. "Owns an album" is measured as the most tracks the artist has
+  // on any single album title. This tolerates a missing album-artist tag (it
+  // falls back to the track artist) and ignores compilation/DJ-mix labelling, so
+  // a real album with guest credits still counts while a mixtape guest, who only
+  // ever has a track or two on any one album, drops out. ALBUM_MIN_TRACKS is the
+  // floor for "an album's worth" and is the one knob to tune.
+  const ALBUM_MIN_TRACKS = 5;
 
-  const cards = filtered.sort((a,b) => a[0].localeCompare(b[0])).map(([name, info]) => {
+  // Most tracks each artist has on any single album title.
+  const _perAlbum = {};
+  for (const t of state.tracks) {
+    if (t.saved) continue;
+    const aa = t.albumArtist || t.artist;
+    if (!aa || isVAName(aa) || aa === 'Unknown Artist') continue;
+    if (!_perAlbum[aa]) _perAlbum[aa] = {};
+    _perAlbum[aa][t.album] = (_perAlbum[aa][t.album] || 0) + 1;
+  }
+  const _maxOnOneAlbum = name => {
+    const a = _perAlbum[name];
+    return a ? Math.max(...Object.values(a)) : 0;
+  };
+
+  const filtered = Object.entries(map).filter(([name]) => _maxOnOneAlbum(name) >= ALBUM_MIN_TRACKS);
+
+  if (!state.artistSort) state.artistSort = 'shuffle';
+  const names = filtered.map(([name]) => name);
+  let order;
+  if (state.artistSort === 'alpha') {
+    order = names.slice().sort((a, b) => a.localeCompare(b));
+  } else {
+    // Reuse a cached shuffle so drilling into an artist and back keeps the same
+    // order; re-roll only when the set changes or the user asks for it.
+    const cached = state._artistShuffle;
+    const sameSet = cached && cached.length === names.length && cached.every(n => names.includes(n));
+    if (sameSet) {
+      order = cached;
+    } else {
+      order = names.slice();
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      state._artistShuffle = order;
+    }
+  }
+
+  const byName = new Map(filtered);
+  const cards = order.map(name => {
+    const info = byName.get(name);
     return `
     <div class="grid-card" data-artist="${esc(name)}">
       <div class="card-art">
@@ -4597,11 +4645,29 @@ function renderArtistView() {
     </div>`;
   }).join('');
 
+  const sortLabel = state.artistSort === 'alpha' ? 'Shuffle' : 'A → Z';
   content.innerHTML = `
-    <div class="section-header"><span class="section-title">Artists</span><span class="section-count">${filtered.length} artists</span></div>
+    <div class="section-header" style="justify-content:space-between;align-items:center">
+      <span class="section-title">Artists</span>
+      <span style="display:inline-flex;align-items:center;gap:14px">
+        <span class="section-count">${order.length} artists</span>
+        <button class="home-reshuffle" id="artist-sort-btn">${sortLabel}</button>
+      </span>
+    </div>
     <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No artists found</div>'}</div>`;
 
   initArtCanvases();
+
+  const _artistSortBtn = document.getElementById('artist-sort-btn');
+  if (_artistSortBtn) _artistSortBtn.onclick = () => {
+    if (state.artistSort === 'alpha') {
+      state.artistSort = 'shuffle';
+      state._artistShuffle = null;   // deliberate flip back re-rolls a fresh shuffle
+    } else {
+      state.artistSort = 'alpha';
+    }
+    renderView();
+  };
 
   content.querySelectorAll('.grid-card').forEach(card => {
     card.onclick = () => {
