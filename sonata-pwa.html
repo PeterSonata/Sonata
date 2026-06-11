@@ -6085,6 +6085,67 @@ function reflectCastTrack(track) {
   renderPlayingState();
 }
 
+/* sonata-sonos-followpoll */
+// While casting, the bridge's push-on-advance poller moves the
+// speaker through the queue on its own when a track ends. The
+// client cannot know unless it asks, so this follows the speaker:
+// it reads the bridge's current id every few seconds and, when it
+// changes, points the local display at the matching queue entry.
+// Manual prev/next update the display directly; this covers the
+// autonomous advance that previously left the pane stale.
+let _castPollTimer = null;
+let _castLastId = null;
+
+function startCastPoll() {
+  _castLastId = (state.currentTrack && (state.currentTrack.jellyfinId || state.currentTrack.id)) || null;
+  if (_castPollTimer) return;
+  _castPollTimer = setInterval(castPollOnce, 3000);
+}
+
+function stopCastPoll() {
+  if (_castPollTimer) { clearInterval(_castPollTimer); _castPollTimer = null; }
+  _castLastId = null;
+}
+
+async function castPollOnce() {
+  if (!isCasting()) { stopCastPoll(); return; }
+  let data;
+  try {
+    data = await bridgeGet('/sonos/state?host=' + encodeURIComponent(speaker.activeRoom.id));
+  } catch (e) { return; } // bridge or speaker hiccup; retry next tick
+  if (!data) return;
+
+  // Keep the play/pause icon honest with the speaker transport.
+  if (data.transport) {
+    const playing = data.transport === 'PLAYING' || data.transport === 'TRANSITIONING';
+    if (playing !== speaker.sonosPlaying) {
+      speaker.sonosPlaying = playing;
+      state.playing = playing;
+      renderPlayingState();
+    }
+  }
+
+  const id = data.currentId;
+  if (!id || id === _castLastId) return;
+  _castLastId = id;
+
+  // Follow the speaker: map its current id back to our queue.
+  if (Array.isArray(state.queue) && state._queueTracks) {
+    const pos = state.queue.findIndex(i => {
+      const t = state._queueTracks[i];
+      return t && (t.jellyfinId || t.id) === id;
+    });
+    if (pos >= 0) {
+      state.queuePos = pos;
+      reflectCastTrack(state._queueTracks[state.queue[pos]]);
+      return;
+    }
+  }
+  if (state.currentTrack && (state.currentTrack.jellyfinId || state.currentTrack.id) === id) {
+    reflectCastTrack(state.currentTrack);
+  }
+}
+
 // sonata-sonos-output-sink
 // Send the current queue (from queuePos onward) to the active Sonos
 // room and reflect it in the display, without touching local audio.
@@ -6136,6 +6197,7 @@ async function playSonos(room) {
     // Reflect the cast in the player display (explicit cast banner).
     setCastIndicator(true);
     reflectCastTrack(state.currentTrack);
+    startCastPoll();
   } catch(e) {
     speaker.activeRoom = null;
     showToast('Could not reach Sonos bridge');
@@ -6151,6 +6213,7 @@ async function stopSonos() {
   updateCastBtns();
   renderSonosRooms();
   setCastIndicator(false);
+  stopCastPoll();
   state.playing = false;
   updateAllPlayerUIs();
   showToast('Stopped Sonos');

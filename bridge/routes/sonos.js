@@ -208,6 +208,39 @@ router.post('/sonos/play', lanOrAuth, async (req, res) => {
 });
 
 // ------------------------------------------------------------
+// Read: current playback state for a host
+// ------------------------------------------------------------
+// The client polls this to follow the speaker: as the push-on-
+// advance poller moves through the queue on natural track ends,
+// the client reads currentId and points its display at the
+// matching queue entry. We return the Jellyfin item id parsed out
+// of the stored stream URL rather than the URL itself, so the
+// embedded api_key is never exposed over the external forward.
+router.get('/sonos/state', lanOrAuth, async (req, res) => {
+  const host = req.query.host;
+  if (!host) return res.status(400).json({ error: 'host required' });
+  try {
+    const queues = await readQueues();
+    const entry = queues[host] || null;
+    let currentId = null;
+    if (entry && entry.current) {
+      const m = String(entry.current).match(/\/Audio\/([^/]+)\/stream/);
+      if (m) currentId = decodeURIComponent(m[1]);
+    }
+    let transport = null;
+    try { transport = await sonos.getTransportState(host); } catch (_) {}
+    res.json({
+      active: !!entry,
+      currentId,
+      remaining: entry && entry.remaining ? entry.remaining.length : 0,
+      transport,
+    });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// ------------------------------------------------------------
 // Control: transport
 // ------------------------------------------------------------
 function transportRoute(path, fn) {
