@@ -6853,6 +6853,7 @@ async function loadCachedLibrary() {
     const saved = state.tracks.filter(t => t.saved);
     state.tracks = [...saved, ...all];
     jellyfin.connected = true;
+    await resolveServerUrl();   // sonata-cacheboot-serverurl: set serverUrl on cache boot so Quick Refresh and stream/art URLs work
     invalidateIndexes();
     buildIndexes();
     updateJfStatus(`Library · ${all.length.toLocaleString()} tracks`);
