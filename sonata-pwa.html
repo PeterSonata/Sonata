@@ -3462,9 +3462,35 @@ document.getElementById('fp-prev-btn').onclick = prevTrack;
 document.getElementById('fp-next-btn').onclick = nextTrack;
 
 // Shuffle
+// applyShuffleToQueue built by sonata_shuffle_live_queue.py
+function applyShuffleToQueue() {
+  // Re-order the live queue when shuffle is toggled mid-playback. Without
+  // this, toggling only set a flag that the next playTracksAt would read, so
+  // tracks already playing carried on in order.
+  if (!state._queueTracks || !state.queue || !state.queue.length) return;
+  const currentIdx = state.queue[state.queuePos];   // index into _queueTracks
+  if (state.shuffle) {
+    const arr = state._queueTracks.map((_, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    if (currentIdx != null) {
+      const pos = arr.indexOf(currentIdx);
+      if (pos >= 0) { arr.splice(pos, 1); arr.unshift(currentIdx); }
+    }
+    state.queue = arr;
+    state.queuePos = 0;
+  } else {
+    state.queue = state._queueTracks.map((_, i) => i);
+    state.queuePos = currentIdx != null ? currentIdx : 0;
+  }
+}
+
 function toggleShuffle() {
   state.shuffle = !state.shuffle;
   ['shuffle-btn','fp-shuffle-btn'].forEach(id => document.getElementById(id).classList.toggle('active', state.shuffle));
+  applyShuffleToQueue();
 }
 document.getElementById('shuffle-btn').onclick    = toggleShuffle;
 document.getElementById('fp-shuffle-btn').onclick = toggleShuffle;
