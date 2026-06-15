@@ -2201,7 +2201,10 @@ body {
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
         Artists
       </div>
-      <!-- sonata-no-album-nav: Albums removed from nav; the albums view is kept for search results and artist drill-downs -->
+      <div class="nav-item" data-view="albums">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        Albums
+      </div>
       <div class="nav-item" data-view="genres">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Genres
@@ -2325,7 +2328,10 @@ body {
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
       Artists
     </div>
-    <!-- sonata-no-album-nav (mobile) -->
+    <div class="bnav-item" data-view="albums">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      Albums
+    </div>
     <div class="bnav-item" data-view="genres">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       Genres
@@ -3268,14 +3274,7 @@ function isSilent() { return _silentMode; }
 // transitions. Audio session stays alive because audio is technically
 // still playing (silently).
 function pausePlayback() {
-  if (!state.currentTrack) return;
-  // sonata-desktop-real-pause: desktop browsers keep the media session alive across a
-  // real pause, so pause the element for real. That keeps the OS overlay's
-  // play/pause state honest, which is what lets its resume button work. The
-  // silent-loop keepalive below is only needed on iOS, where the audio
-  // session is dropped the moment audio goes silent.
-  if (!isIOS) { audio.pause(); return; }
-  if (_silentMode) return;
+  if (!state.currentTrack || _silentMode) return;
   _savedSrc = audio.src;
   _savedTime = audio.currentTime;
   _silentMode = true;
@@ -3292,7 +3291,6 @@ function pausePlayback() {
 
 function resumePlayback() {
   if (!state.currentTrack) return;
-  if (!isIOS) { audio.play().catch(() => {}); return; }
   if (_silentMode && _savedSrc) {
     const restoreTime = _savedTime;
     const restoreSrc = _savedSrc;
@@ -4027,21 +4025,6 @@ function renderHomeView() {
         </button>
       </div>`;
 
-  refreshQuickfires();
-  const quickfiresSection = (!inSelect && state.quickfires.length) ? `
-    <div class="home-section-bar"><span class="home-section-title">Today's Quickfires</span></div>
-    <div style="display:flex;flex-direction:column;gap:8px;padding:0 18px 6px">
-      ${state.quickfires.map(qf => `
-        <div class="qf-today-row" data-qf="${esc(qf.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:2px solid var(--border);background:var(--surface2);cursor:pointer">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700">${esc(qf.name)}</div>
-            <div style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">${qf.trackIds.length} track${qf.trackIds.length !== 1 ? 's' : ''}</div>
-          </div>
-          <button class="home-reshuffle qf-save-btn" data-qf="${esc(qf.id)}">Save as playlist</button>
-        </div>`).join('')}
-    </div>` : '';
-
   content.innerHTML = `
     <div class="home-hero">
       <div class="home-hero-left">
@@ -4057,7 +4040,6 @@ function renderHomeView() {
         Quickfire Playlist
       </button>
     </div>
-    ${quickfiresSection}
     ${qfBar}
     ${sectionBar}
     <div class="grid-view" style="border-top:none">${cards}</div>`;
@@ -4072,16 +4054,6 @@ function renderHomeView() {
     document.getElementById('qf-cancel-btn').onclick = cancelQuickfireSelection;
     document.getElementById('qf-create-btn').onclick = createQuickfirePlaylist;
   }
-
-  content.querySelectorAll('.qf-today-row').forEach(row => {
-    row.onclick = (e) => {
-      if (e.target.closest('.qf-save-btn')) return;
-      playQuickfire(row.dataset.qf);
-    };
-  });
-  content.querySelectorAll('.qf-save-btn').forEach(btn => {
-    btn.onclick = (e) => { e.stopPropagation(); promoteQuickfire(btn.dataset.qf); };
-  });
 
   content.querySelectorAll('.home-album-card').forEach(card => {
     card.onclick = () => {
@@ -4113,88 +4085,6 @@ function renderHomeView() {
 //  QUICKFIRE PLAYLIST
 //  Pick 4 albums from today's home picks, shuffle their tracks, save as a playlist
 // ══════════════════════════════════════════════
-// sonata-quickfire-ephemeral: today-only quickfires that vanish at 3am, plus
-// promotion to a permanent playlist. Stored client-side, never uploaded to
-// Jellyfin (the playlist sync preserves local-only entries anyway).
-const QUICKFIRE_KEY = 'sonata_quickfires';
-
-function quickfireDayKey() {
-  // Listening day rolls at 3am: anything before 3am counts as the night before.
-  const d = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function loadQuickfires() {
-  try {
-    const raw = localStorage.getItem(QUICKFIRE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    if (!data || data.day !== quickfireDayKey()) return [];   // rolled past 3am
-    return Array.isArray(data.items) ? data.items : [];
-  } catch (e) { return []; }
-}
-
-function saveQuickfires() {
-  try {
-    localStorage.setItem(QUICKFIRE_KEY, JSON.stringify({ day: quickfireDayKey(), items: state.quickfires }));
-  } catch (e) { /* quota, non-fatal */ }
-}
-
-// Hydrate state.quickfires from storage, auto-pruning anything from before the
-// last 3am rollover.
-function refreshQuickfires() {
-  state.quickfires = loadQuickfires();
-  return state.quickfires;
-}
-
-function playQuickfire(qfId) {
-  refreshQuickfires();
-  const qf = state.quickfires.find(q => q.id === qfId);
-  if (!qf) { showToast('That quickfire has expired'); renderView(); return; }
-  const tracks = qf.trackIds.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
-  if (!tracks.length) { showToast('Quickfire tracks unavailable'); return; }
-  playTracksAt(tracks, 0);
-  showToast(`Playing ${qf.name} (${tracks.length} tracks)`);
-}
-
-async function promoteQuickfire(qfId) {
-  refreshQuickfires();
-  const qf = state.quickfires.find(q => q.id === qfId);
-  if (!qf) { showToast('That quickfire has expired'); renderView(); return; }
-  const tracks = qf.trackIds.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
-  if (!tracks.length) { showToast('No tracks to save'); return; }
-
-  const d = new Date();
-  const name = `${d.getDate()}/${d.getMonth() + 1} ${qf.name}`;
-  const pl = await createJellyfinPlaylist(name);
-  pl.trackIds = tracks.map(t => t.id);
-
-  if (jellyfin.connected && pl.id && !/^[0-9]{13}$/.test(pl.id)) {
-    try {
-      const ids = tracks.map(t => t.id).join(',');
-      await jfPost(`/Playlists/${pl.id}/Items?Ids=${ids}&UserId=${jellyfin.userId}`, {});
-      const items = await jfGet(`/Playlists/${pl.id}/Items?UserId=${jellyfin.userId}`);
-      pl._entryIds = {};
-      for (const i of (items.Items || [])) pl._entryIds[i.Id] = i.PlaylistItemId;
-    } catch (e) {
-      console.warn('Quickfire promote bulk-add failed:', e);
-    }
-  }
-
-  state.playlists.push(pl);
-  savePlaylists();
-  renderPlaylists();
-
-  state.quickfires = state.quickfires.filter(q => q.id !== qfId);
-  saveQuickfires();
-
-  showToast(`Saved as "${name}"`);
-  renderView();
-}
-
 function startQuickfireSelection() {
   if (!state.homeShuffle || state.homeShuffle.length < 4) {
     showToast('Not enough albums to choose from');
@@ -4267,29 +4157,47 @@ async function createQuickfirePlaylist() {
     [allTracks[i], allTracks[j]] = [allTracks[j], allTracks[i]];
   }
 
-  refreshQuickfires();
-  let _qfMax = 0;
-  for (const q of state.quickfires) {
-    const mm = (q.name || '').match(/^Quickfire (\d+)$/);
-    if (mm) { const v = parseInt(mm[1], 10); if (v > _qfMax) _qfMax = v; }
-  }
-  const name = `Quickfire ${_qfMax + 1}`;
+  const name = nextQuickfireName();
 
-  // Exit selection mode immediately so the UI feels responsive.
+  // Exit selection mode immediately so the UI feels responsive
   state.quickfireMode = false;
   state.quickfireSelected = [];
 
-  // Ephemeral: store as a today-only quickfire, not a Jellyfin playlist.
-  const qf = { id: 'qf' + Date.now(), name, trackIds: allTracks.map(t => t.id) };
-  state.quickfires.push(qf);
-  saveQuickfires();
+  // Create the playlist (Jellyfin or local-only fallback)
+  const pl = await createJellyfinPlaylist(name);
+  pl.trackIds = allTracks.map(t => t.id);
 
-  // Play the shuffled order straight away.
+  // Bulk-add to Jellyfin if connected. Single call with comma-separated IDs.
+  if (jellyfin.connected && pl.id && !/^[0-9]{13}$/.test(pl.id)) {
+    try {
+      const ids = allTracks.map(t => t.id).join(',');
+      await jfPost(`/Playlists/${pl.id}/Items?Ids=${ids}&UserId=${jellyfin.userId}`, {});
+      // Refresh entry IDs for delete-track-from-playlist support later
+      const items = await jfGet(`/Playlists/${pl.id}/Items?UserId=${jellyfin.userId}`);
+      pl._entryIds = {};
+      for (const i of (items.Items || [])) {
+        pl._entryIds[i.Id] = i.PlaylistItemId;
+      }
+    } catch(e) {
+      console.warn('Quickfire bulk-add failed, playlist created but empty server-side:', e);
+    }
+  }
+
+  state.playlists.push(pl);
+  savePlaylists();
+  renderPlaylists();
+
+  // Start playback from the shuffled track order
   playTracksAt(allTracks, 0);
-  showToast(`Playing ${name} (${allTracks.length} tracks)`);
+  showToast(`${name} — playing ${allTracks.length} tracks`);
 
-  // Land on Home, where the new quickfire now sits under Today's Quickfires.
-  setView('home');
+  // Route into the playlist's track view so the user can see what they made
+  state.currentView = 'playlist';
+  state.drillTarget = { type: 'playlist', value: pl.id };
+  // Sync nav highlighting so the active state lines up with the new view
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(n => n.classList.toggle('active', n.dataset.view === 'playlists-mobile'));
+  renderView();
 }
 
 function wheelOfFortune() {
@@ -4367,8 +4275,7 @@ function renderTrackList(tracks, backFn, backLabel) {
     </button>` : '';
 
   // Tweak 8: when drilling from home, back-button reads 'Home'.
-  const defaultBackLabel = (state.drillOrigin === 'search' && !backFn) ? 'Search results'
-                         : (state.drillOrigin === 'home' && !backFn) ? 'Home' : 'Back';
+  const defaultBackLabel = (state.drillOrigin === 'home' && !backFn) ? 'Home' : 'Back';
   const backBtn = hasBack ? `
     <button class="back-btn" id="back-btn">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -4440,7 +4347,6 @@ function renderTrackList(tracks, backFn, backLabel) {
     document.getElementById('back-btn').onclick = backFn
       ? backFn
       : () => {
-          if (state.drillOrigin === 'search') { _restoreSearch(); return; }
           // Tweak 8: if we drilled in from home, back returns to home.
           if (state.drillOrigin === 'home') {
             state.drillOrigin = null;
@@ -4670,57 +4576,9 @@ function renderArtistView() {
     for (const v of Object.values(map)) v.albumCount = v.albums.size;
   }
 
-  // sonata-artist-album-floor: feature only artists you own an album by, and
-  // shuffle the grid by default with a header button to flip to A-Z and back to a
-  // fresh shuffle. "Owns an album" is measured as the most tracks the artist has
-  // on any single album title. This tolerates a missing album-artist tag (it
-  // falls back to the track artist) and ignores compilation/DJ-mix labelling, so
-  // a real album with guest credits still counts while a mixtape guest, who only
-  // ever has a track or two on any one album, drops out. ALBUM_MIN_TRACKS is the
-  // floor for "an album's worth" and is the one knob to tune.
-  const ALBUM_MIN_TRACKS = 5;
+  const filtered = Object.entries(map).filter(([,v]) => v.count > 1);
 
-  // Most tracks each artist has on any single album title.
-  const _perAlbum = {};
-  for (const t of state.tracks) {
-    if (t.saved) continue;
-    const aa = t.albumArtist || t.artist;
-    if (!aa || isVAName(aa) || aa === 'Unknown Artist') continue;
-    if (!_perAlbum[aa]) _perAlbum[aa] = {};
-    _perAlbum[aa][t.album] = (_perAlbum[aa][t.album] || 0) + 1;
-  }
-  const _maxOnOneAlbum = name => {
-    const a = _perAlbum[name];
-    return a ? Math.max(...Object.values(a)) : 0;
-  };
-
-  const filtered = Object.entries(map).filter(([name]) => _maxOnOneAlbum(name) >= ALBUM_MIN_TRACKS);
-
-  if (!state.artistSort) state.artistSort = 'shuffle';
-  const names = filtered.map(([name]) => name);
-  let order;
-  if (state.artistSort === 'alpha') {
-    order = names.slice().sort((a, b) => a.localeCompare(b));
-  } else {
-    // Reuse a cached shuffle so drilling into an artist and back keeps the same
-    // order; re-roll only when the set changes or the user asks for it.
-    const cached = state._artistShuffle;
-    const sameSet = cached && cached.length === names.length && cached.every(n => names.includes(n));
-    if (sameSet) {
-      order = cached;
-    } else {
-      order = names.slice();
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
-      }
-      state._artistShuffle = order;
-    }
-  }
-
-  const byName = new Map(filtered);
-  const cards = order.map(name => {
-    const info = byName.get(name);
+  const cards = filtered.sort((a,b) => a[0].localeCompare(b[0])).map(([name, info]) => {
     return `
     <div class="grid-card" data-artist="${esc(name)}">
       <div class="card-art">
@@ -4731,29 +4589,11 @@ function renderArtistView() {
     </div>`;
   }).join('');
 
-  const sortLabel = state.artistSort === 'alpha' ? 'Shuffle' : 'A → Z';
   content.innerHTML = `
-    <div class="section-header" style="justify-content:space-between;align-items:center">
-      <span class="section-title">Artists</span>
-      <span style="display:inline-flex;align-items:center;gap:14px">
-        <span class="section-count">${order.length} artists</span>
-        <button class="home-reshuffle" id="artist-sort-btn">${sortLabel}</button>
-      </span>
-    </div>
+    <div class="section-header"><span class="section-title">Artists</span><span class="section-count">${filtered.length} artists</span></div>
     <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No artists found</div>'}</div>`;
 
   initArtCanvases();
-
-  const _artistSortBtn = document.getElementById('artist-sort-btn');
-  if (_artistSortBtn) _artistSortBtn.onclick = () => {
-    if (state.artistSort === 'alpha') {
-      state.artistSort = 'shuffle';
-      state._artistShuffle = null;   // deliberate flip back re-rolls a fresh shuffle
-    } else {
-      state.artistSort = 'alpha';
-    }
-    renderView();
-  };
 
   content.querySelectorAll('.grid-card').forEach(card => {
     card.onclick = () => {
@@ -4806,7 +4646,7 @@ function renderArtistAlbums(artistName) {
   content.innerHTML = `
     <button class="back-btn" id="back-btn">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      ${state.drillOrigin === 'search' ? 'Search results' : 'Artists'}
+      Artists
     </button>
     <div class="section-header artist-albums-header">
       <div class="artist-albums-hero">
@@ -4824,7 +4664,6 @@ function renderArtistAlbums(artistName) {
   initArtCanvases();
 
   document.getElementById('back-btn').onclick = () => {
-    if (state.drillOrigin === 'search') { _restoreSearch(); return; }
     state.drillTarget = null;
     renderView();
   };
@@ -4842,18 +4681,6 @@ function renderArtistAlbums(artistName) {
 }
 
 // ── Search view ───────────────────────────────────────────────────────────────
-
-// sonata-search-return: return to the search results after drilling into a tile.
-function _restoreSearch() {
-  state.drillTarget = null;
-  state.drillOrigin = null;
-  state.searchQ = state.searchReturn || '';
-  state.searchReturn = null;
-  state.currentView = 'search';
-  const _s = document.getElementById('search');     if (_s) _s.value = state.searchQ;
-  const _m = document.getElementById('mob-search');  if (_m) _m.value = state.searchQ;
-  renderView();
-}
 
 function renderSearchView() {
   if (!state.searchQ) { renderTrackList(state.tracks); return; }
@@ -4878,22 +4705,13 @@ function renderSearchView() {
     .sort((a,b) => a[0].localeCompare(b[0]));
   const matchedArtists = allMatchedArtists.slice(0, 30);
 
-  // sonata-search-albums: tracks match on TITLE only now; album-name matches
-  // surface as their own album tiles instead of polluting the track list.
-  const allMatchedTracks = state.tracks.filter(t => t.title.toLowerCase().includes(q));
+  // Matching tracks (title or album, not already covered by artist match)
+  // Round 1 addendum: cap rendered tracks. allMatchedTracks keeps the
+  // full count for the section label.
+  const allMatchedTracks = state.tracks.filter(t =>
+    t.title.toLowerCase().includes(q) || t.album.toLowerCase().includes(q)
+  );
   const matchedTracks = allMatchedTracks.slice(0, 100);
-
-  // Matching albums (album title contains the term), grouped per album+artist.
-  // Any category: the album drill-down filters purely by album name.
-  const albumMap = {};
-  for (const t of state.tracks) {
-    if (!t.album || !t.album.toLowerCase().includes(q)) continue;
-    const aa = t.albumArtist || t.artist;
-    const key = t.album + '||' + aa;
-    if (!albumMap[key]) albumMap[key] = { album: t.album, artist: aa, seed: t.artSeed, artUrl: t.artUrl };
-  }
-  const allMatchedAlbums = Object.values(albumMap).sort((a,b) => a.album.localeCompare(b.album));
-  const matchedAlbums = allMatchedAlbums.slice(0, 48);
 
   let html = `<div class="section-header"><span class="section-title">"${esc(state.searchQ)}"</span></div>`;
 
@@ -4917,28 +4735,12 @@ function renderSearchView() {
       <div class="grid-view" style="border-top:none">${cards}</div>`;
   }
 
-  // Album tiles section
-  if (matchedAlbums.length) {
-    const acards = matchedAlbums.map(info => `
-      <div class="grid-card search-album-card" data-album="${esc(info.album)}" data-artist="${esc(info.artist)}">
-        <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
-        <div class="card-label">${esc(info.album)}</div>
-        <div class="card-sublabel">${esc(info.artist)}</div>
-      </div>`).join('');
-    const _albumTrunc = allMatchedAlbums.length > matchedAlbums.length
-      ? ` <span style="font-weight:400;opacity:0.6">(showing ${matchedAlbums.length} of ${allMatchedAlbums.length})</span>`
-      : '';
-    html += `
-      <div class="search-section-label">Albums${_albumTrunc}</div>
-      <div class="grid-view" style="border-top:none">${acards}</div>`;
-  }
-
   // Track results section
   if (matchedTracks.length) {
     const _tracksLabel = allMatchedTracks.length > matchedTracks.length
       ? `${matchedTracks.length} of ${allMatchedTracks.length.toLocaleString()}`
       : `${matchedTracks.length}`;
-    html += `<div class="search-section-label" style="margin-top:0">Tracks <span style="font-weight:400;opacity:0.6">(${_tracksLabel})</span></div>`;
+    html += `<div class="search-section-label" style="margin-top:0">Tracks &amp; Albums <span style="font-weight:400;opacity:0.6">(${_tracksLabel})</span></div>`;
     const rows = matchedTracks.map((t, i) => {
       const isPlaying = state.currentTrack && t.id === state.currentTrack.id;
       const playing   = isPlaying && state.playing;
@@ -4963,7 +4765,7 @@ function renderSearchView() {
       <div id="track-list">${rows}</div>`;
   }
 
-  if (!matchedArtists.length && !matchedAlbums.length && !matchedTracks.length) {
+  if (!matchedArtists.length && !matchedTracks.length) {
     html += `<div style="padding:32px 24px;color:var(--text3);font-size:13px">No results for "${esc(state.searchQ)}"</div>`;
   }
 
@@ -4974,21 +4776,6 @@ function renderSearchView() {
     card.onclick = () => {
       state.drillTarget = { type: 'artist', value: card.dataset.artist };
       state.currentView = 'artists';
-      state.drillOrigin = 'search';
-      state.searchReturn = state.searchQ;
-      state.searchQ = '';
-      document.getElementById('search').value = '';
-      document.getElementById('mob-search').value = '';
-      renderView();
-    };
-  });
-
-  content.querySelectorAll('.search-album-card').forEach(card => {
-    card.onclick = () => {
-      state.drillTarget = { type: 'album', value: card.dataset.album, artist: card.dataset.artist };
-      state.currentView = 'albums';
-      state.drillOrigin = 'search';
-      state.searchReturn = state.searchQ;
       state.searchQ = '';
       document.getElementById('search').value = '';
       document.getElementById('mob-search').value = '';
@@ -5016,53 +4803,6 @@ function renderSearchView() {
 }
 
 // ── Albums view (proper artist albums only) ───────────────────────────────────
-
-
-// ── Saved view ────────────────────────────────────────────────────────────────
-// renderSavedView built by sonata_saved_view.py
-function renderSavedView() {
-  // Drilling into a saved album reuses the standard track list. Keep this guard
-  // first, exactly like renderAlbumView, so Back returns here.
-  if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
-
-  const content = document.getElementById('content');
-
-  // Group saved tracks by album (album||albumArtist), mirroring the Albums view.
-  const map = {};
-  for (const t of state.tracks) {
-    if (!state.savedIds.has(t.id)) continue;
-    const aa  = t.albumArtist || t.artist;
-    const key = t.album + '||' + aa;
-    if (!map[key]) map[key] = { album: t.album, artist: aa, count: 0, seed: t.artSeed, artUrl: t.artUrl || null };
-    map[key].count++;
-  }
-
-  const cards = Object.values(map)
-    .sort((a, b) => a.album.localeCompare(b.album))
-    .map(info => `
-    <div class="grid-card" data-album="${esc(info.album)}" data-artist="${esc(info.artist)}">
-      <div class="card-art"><canvas class="art-canvas" data-seed="${esc(info.seed)}" data-arturl="${esc(info.artUrl || '')}" data-size="160"></canvas></div>
-      <div class="card-label">${esc(info.album)}</div>
-      <div class="card-sublabel">
-        <span class="clickable-artist" data-artist="${esc(info.artist)}">${esc(info.artist)}</span>
-      </div>
-    </div>`).join('');
-
-  const count = Object.keys(map).length;
-
-  content.innerHTML = `
-    <div class="section-header"><span class="section-title">Saved</span><span class="section-count">${count} album${count !== 1 ? 's' : ''}</span></div>
-    <div class="grid-view">${cards || '<div style="padding:24px;color:var(--text3);font-size:13px">No saved music yet. Save an album from its page to keep it offline.</div>'}</div>`;
-
-  initArtCanvases();
-
-  content.querySelectorAll('.grid-card').forEach(card => {
-    card.onclick = () => {
-      state.drillTarget = { type: 'album', value: card.dataset.album, artist: card.dataset.artist };
-      renderView();   // currentView stays 'saved', so Back returns to the Saved grid
-    };
-  });
-}
 
 function renderAlbumView() {
   if (state.drillTarget) { renderTrackList(getVisibleTracks()); return; }
@@ -6132,67 +5872,6 @@ function reflectCastTrack(track) {
   renderPlayingState();
 }
 
-/* sonata-sonos-followpoll */
-// While casting, the bridge's push-on-advance poller moves the
-// speaker through the queue on its own when a track ends. The
-// client cannot know unless it asks, so this follows the speaker:
-// it reads the bridge's current id every few seconds and, when it
-// changes, points the local display at the matching queue entry.
-// Manual prev/next update the display directly; this covers the
-// autonomous advance that previously left the pane stale.
-let _castPollTimer = null;
-let _castLastId = null;
-
-function startCastPoll() {
-  _castLastId = (state.currentTrack && (state.currentTrack.jellyfinId || state.currentTrack.id)) || null;
-  if (_castPollTimer) return;
-  _castPollTimer = setInterval(castPollOnce, 3000);
-}
-
-function stopCastPoll() {
-  if (_castPollTimer) { clearInterval(_castPollTimer); _castPollTimer = null; }
-  _castLastId = null;
-}
-
-async function castPollOnce() {
-  if (!isCasting()) { stopCastPoll(); return; }
-  let data;
-  try {
-    data = await bridgeGet('/sonos/state?host=' + encodeURIComponent(speaker.activeRoom.id));
-  } catch (e) { return; } // bridge or speaker hiccup; retry next tick
-  if (!data) return;
-
-  // Keep the play/pause icon honest with the speaker transport.
-  if (data.transport) {
-    const playing = data.transport === 'PLAYING' || data.transport === 'TRANSITIONING';
-    if (playing !== speaker.sonosPlaying) {
-      speaker.sonosPlaying = playing;
-      state.playing = playing;
-      renderPlayingState();
-    }
-  }
-
-  const id = data.currentId;
-  if (!id || id === _castLastId) return;
-  _castLastId = id;
-
-  // Follow the speaker: map its current id back to our queue.
-  if (Array.isArray(state.queue) && state._queueTracks) {
-    const pos = state.queue.findIndex(i => {
-      const t = state._queueTracks[i];
-      return t && (t.jellyfinId || t.id) === id;
-    });
-    if (pos >= 0) {
-      state.queuePos = pos;
-      reflectCastTrack(state._queueTracks[state.queue[pos]]);
-      return;
-    }
-  }
-  if (state.currentTrack && (state.currentTrack.jellyfinId || state.currentTrack.id) === id) {
-    reflectCastTrack(state.currentTrack);
-  }
-}
-
 // sonata-sonos-output-sink
 // Send the current queue (from queuePos onward) to the active Sonos
 // room and reflect it in the display, without touching local audio.
@@ -6244,7 +5923,6 @@ async function playSonos(room) {
     // Reflect the cast in the player display (explicit cast banner).
     setCastIndicator(true);
     reflectCastTrack(state.currentTrack);
-    startCastPoll();
   } catch(e) {
     speaker.activeRoom = null;
     showToast('Could not reach Sonos bridge');
@@ -6260,7 +5938,6 @@ async function stopSonos() {
   updateCastBtns();
   renderSonosRooms();
   setCastIndicator(false);
-  stopCastPoll();
   state.playing = false;
   updateAllPlayerUIs();
   showToast('Stopped Sonos');
