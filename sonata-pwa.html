@@ -2660,6 +2660,8 @@ const state = {
   // Cleared whenever state.tracks changes; rebuilt lazily by ensureIndexes().
   indexes: null,
   homeShuffle: null,   // Cached random selection of 12 albums for the home view
+  libraryReady: false, // True once the library cache or first-run fetch has loaded (sonata_home_picks_coldstart.py)
+  homePicksProvisional: false, // True when homeShuffle was set before libraryReady
   quickfireMode: false,      // True when the user is picking 4 albums for a Quickfire playlist
   quickfireSelected: [],     // Albums (by string key) selected for the in-progress Quickfire
 };
@@ -3963,6 +3965,24 @@ function reshuffleHome() {
 
 // Use today's stored picks if they exist and the albums still resolve, otherwise pick fresh
 function ensureHomePicks() {
+  // ── Cold-start guard (sonata_home_picks_coldstart.py) ──
+  // Before the library cache has loaded, state.tracks holds only OPFS-saved
+  // tracks. Validating, topping up or persisting picks against that subset
+  // clobbers the real daily picks in localStorage. Show today's stored picks
+  // verbatim (pick objects carry their own seed/artUrl so they render without
+  // tracks), or a provisional shuffle, and never write to storage until the
+  // library is fully loaded.
+  if (!state.libraryReady) {
+    const storedEarly = loadStoredHomePicks();
+    state.homeShuffle = (storedEarly && storedEarly.length) ? storedEarly : pickRandomAlbums(12);
+    state.homePicksProvisional = true;
+    return;
+  }
+  if (state.homePicksProvisional) {
+    // Library has arrived since the provisional render — discard and re-derive
+    state.homeShuffle = null;
+    state.homePicksProvisional = false;
+  }
   if (state.homeShuffle && state.homeShuffle.length) {
     // Already have picks in memory — but check they're not from a previous day
     const stored = loadStoredHomePicks();
@@ -7099,6 +7119,7 @@ openSettings = function() {
     splashText.textContent = 'reading library…';
     const fromCache = await loadCachedLibrary();
     if (fromCache) {
+      state.libraryReady = true;   // sonata_home_picks_coldstart.py
       // Library from cache: render immediately, hide splash (with floor),
       // then version-check against the bridge in the background and only
       // re-pull the whole library if the bridge version has changed.
@@ -7113,6 +7134,7 @@ openSettings = function() {
       splashText.textContent = 'first run, fetching everything…';
       const gotFromBridge = await syncLibraryFromBridge({ firstRun: true });
       if (!gotFromBridge) await fetchLibrary({ keepSplash: true });
+      state.libraryReady = true;   // sonata_home_picks_coldstart.py
       renderPlaylists();
       renderView();
       await hideSplash();
